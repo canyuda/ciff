@@ -1,0 +1,237 @@
+@startuml Ciff ER Diagram
+!theme plain
+
+skinparam backgroundColor #FEFEFE
+skinparam entity {
+    BackgroundColor #FFFFFF
+    BorderColor #666666
+    ArrowColor #666666
+}
+skinparam class {
+    BackgroundColor #E3F2FD
+    BorderColor #1565C0
+    ArrowColor #666666
+}
+skinparam defaultFontName Menlo
+skinparam defaultFontSize 11
+
+title Ciff - Entity Relationship Diagram
+
+' ===== User =====
+entity "t_user" as user #E3F2FD {
+    * id : BIGINT <<PK>>
+    --
+    * username : VARCHAR
+    * password : VARCHAR
+    * role : VARCHAR  -- admin / user
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
+' ===== Provider & Model =====
+entity "t_provider" as provider #FFF3E0 {
+    * id : BIGINT <<PK>>
+    --
+    * name : VARCHAR       -- OpenAI / Claude / Ollama
+    * type : VARCHAR
+    * api_base_url : VARCHAR
+    * api_key_encrypted : VARCHAR
+    * status : TINYINT     -- enabled / disabled
+    * config : JSON
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
+entity "t_model" as model #FFF3E0 {
+    * id : BIGINT <<PK>>
+    --
+    * provider_id : BIGINT <<FK>>
+    * name : VARCHAR       -- gpt-4o / claude-sonnet
+    * display_name : VARCHAR
+    * max_tokens : INT
+    * default_params : JSON  -- temperature, top_p etc.
+    * status : TINYINT
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
+' ===== Tool =====
+entity "t_tool" as tool #F0F4C3 {
+    * id : BIGINT <<PK>>
+    --
+    * name : VARCHAR
+    * description : VARCHAR
+    * type : VARCHAR        -- api / mcp
+    * endpoint : VARCHAR    -- URL or MCP server address
+    * param_schema : JSON   -- input/output schema
+    * auth_config : JSON
+    * status : TINYINT
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
+' ===== Knowledge =====
+entity "t_knowledge" as knowledge #E8F5E9 {
+    * id : BIGINT <<PK>>
+    --
+    * user_id : BIGINT <<FK>>
+    * name : VARCHAR
+    * description : VARCHAR
+    * chunk_size : INT      -- fixed chunk length
+    * embedding_model : VARCHAR
+    * status : TINYINT
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
+entity "t_knowledge_document" as doc #E8F5E9 {
+    * id : BIGINT <<PK>>
+    --
+    * knowledge_id : BIGINT <<FK>>
+    * file_name : VARCHAR
+    * file_path : VARCHAR
+    * file_size : BIGINT
+    * chunk_count : INT
+    * status : TINYINT     -- uploading / processing / ready / failed
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
+entity "t_knowledge_chunk\n(PGVector)" as chunk #C8E6C9 {
+    * id : BIGSERIAL <<PK>>
+    --
+    * document_id : BIGINT <<FK>>
+    * knowledge_id : BIGINT <<FK>>
+    * content : TEXT
+    * embedding : VECTOR(1536)
+    * chunk_index : INT
+    * create_time : TIMESTAMP
+}
+
+' ===== Agent =====
+entity "t_agent" as agent #FFE0B2 {
+    * id : BIGINT <<PK>>
+    --
+    * user_id : BIGINT <<FK>>
+    * model_id : BIGINT <<FK>>
+    * workflow_id : BIGINT <<FK>>  -- nullable
+    * name : VARCHAR
+    * description : VARCHAR
+    * type : VARCHAR        -- chatbot / agent / workflow
+    * system_prompt : TEXT
+    * model_params : JSON   -- temperature, max_tokens override
+    * fallback_model_id : BIGINT <<FK>>  -- nullable
+    * status : TINYINT
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
+entity "t_agent_tool" as agent_tool #F0F4C3 {
+    * id : BIGINT <<PK>>
+    --
+    * agent_id : BIGINT <<FK>>
+    * tool_id : BIGINT <<FK>>
+    * create_time : DATETIME
+}
+
+entity "t_agent_knowledge" as agent_knowledge #E8F5E9 {
+    * id : BIGINT <<PK>>
+    --
+    * agent_id : BIGINT <<FK>>
+    * knowledge_id : BIGINT <<FK>>
+    * create_time : DATETIME
+}
+
+' ===== Workflow =====
+entity "t_workflow" as workflow #D1C4E9 {
+    * id : BIGINT <<PK>>
+    --
+    * user_id : BIGINT <<FK>>
+    * name : VARCHAR
+    * description : VARCHAR
+    * definition : JSON     -- steps + conditions
+    * status : TINYINT
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
+' ===== Conversation =====
+entity "t_conversation" as conversation #FFE0B2 {
+    * id : BIGINT <<PK>>
+    --
+    * user_id : BIGINT <<FK>>
+    * agent_id : BIGINT <<FK>>
+    * title : VARCHAR
+    * status : TINYINT     -- active / archived
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
+entity "t_chat_message" as message #FFE0B2 {
+    * id : BIGINT <<PK>>
+    --
+    * conversation_id : BIGINT <<FK>>
+    * role : VARCHAR        -- user / assistant / tool
+    * content : TEXT
+    * token_usage : JSON    -- prompt_tokens, completion_tokens
+    * model_name : VARCHAR
+    * latency_ms : INT
+    * tool_call_id : VARCHAR  -- nullable, for tool response
+    * metadata : JSON
+    * create_time : DATETIME
+}
+
+' ===== API Key =====
+entity "t_api_key" as api_key #E3F2FD {
+    * id : BIGINT <<PK>>
+    --
+    * user_id : BIGINT <<FK>>
+    * agent_id : BIGINT <<FK>>
+    * name : VARCHAR
+    * key_hash : VARCHAR    -- SHA256 of API key
+    * key_prefix : VARCHAR  -- first 8 chars for identification
+    * permissions : JSON    -- allowed operations
+    * expires_at : DATETIME  -- nullable
+    * status : TINYINT     -- active / revoked
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
+' ===== Relationships =====
+
+' User
+user ||--o{ agent : "creates"
+user ||--o{ workflow : "creates"
+user ||--o{ knowledge : "creates"
+user ||--o{ conversation : "has"
+user ||--o{ api_key : "generates"
+
+' Provider & Model
+provider ||--o{ model : "provides"
+model ||--o{ agent : "used by"
+
+' Agent relationships
+agent }|--|| model : "references"
+agent ||--o| workflow : "optionally uses"
+agent ||--o{ agent_tool : "binds tools"
+agent ||--o{ agent_knowledge : "binds knowledge"
+agent ||--o{ conversation : "serves"
+agent ||--o{ api_key : "exposed via"
+
+' Tool
+tool ||--o{ agent_tool : "bound to"
+
+' Knowledge
+knowledge ||--o{ agent_knowledge : "bound to"
+knowledge ||--o{ doc : "contains"
+doc ||--o{ chunk : "split into"
+
+' Conversation
+conversation ||--o{ message : "contains"
+
+footer
+  MySQL: 13 tables (t_* with blue/orange/yellow/purple/green background)
+  PGVector: 1 table (t_knowledge_chunk with green background)
+endfooter
+
+@enduml

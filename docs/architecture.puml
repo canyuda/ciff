@@ -1,0 +1,147 @@
+@startuml Ciff Architecture
+!theme plain
+!define RECTANGLE class
+
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle rectangle
+skinparam defaultFontName Menlo
+skinparam defaultFontSize 11
+skinparam arrowThickness 1.2
+skinparam packageBorderColor #888888
+skinparam packageFontSize 13
+skinparam nodesep 60
+skinparam ranksep 40
+
+title Ciff - AI Agent Platform Architecture\nDocker Compose Single Node | 50 Users
+
+' ===== External =====
+actor "User\n(20-50)" as user #LightBlue
+cloud "LLM APIs\nOpenAI / Claude / Gemini / Ollama" as llm #LightGray
+cloud "External APIs\nMCP Tools" as ext_api #LightGray
+
+' ===== Docker Compose =====
+rectangle "Docker Compose - Single Node" as docker #F5F5F5 {
+
+    ' --- Nginx ---
+    rectangle "Nginx\n:80 / :443" as nginx #E8F5E9 {
+        note as n1
+          TLS termination
+          /api/**    → ciff-server
+          /sse/**    → ciff-server (buffering off)
+          /**        → ciff-web (static)
+        end note
+    }
+
+    ' --- Frontend ---
+    rectangle "ciff-web\nNginx Container" as web #E3F2FD {
+        note as n2
+          Vue3 + TypeScript
+          Element Plus
+          SSE (typewriter effect)
+        end note
+    }
+
+    ' --- Backend ---
+    rectangle "ciff-server\nSpring Boot 3.3 :8080\nJVM -Xmx512m" as server #FFF3E0 {
+
+        rectangle "Thread Pools" as pools #FAFAFA {
+            rectangle "Tomcat\n200" as tomcat #E0E0E0
+            rectangle "LLM\n10/30" as llm_pool #FFCDD2
+            rectangle "Biz\n5/15" as biz_pool #C8E6C9
+        }
+
+        rectangle "Business Modules" as modules #FAFAFA {
+            rectangle "Chat Engine\n(SSE + Streaming)" as chat #FFE0B2
+            rectangle "Agent\n(Config + Prompt)" as agent #B3E5FC
+            rectangle "Workflow\n(JSON Engine)" as workflow #D1C4E9
+            rectangle "Knowledge\n(RAG Pipeline)" as knowledge #C8E6C9
+            rectangle "MCP\n(Tool Execution)" as mcp #F0F4C3
+            rectangle "Provider\n(LLM Adapter)" as provider #FFCDD2
+        }
+
+        rectangle "Resilience" as resilience #FFEBEE {
+            note as n3
+              Circuit Breaker (per provider)
+              Bulkhead (per provider)
+              Retry (before first token)
+              Timeout (4-level)
+            end note
+        }
+
+        rectangle "Async" as async #E8F5E9 {
+            note as n4
+              @Async bizExecutor
+              - cache refresh
+              - conversation log
+              Redis Stream
+              - document processing
+            end note
+        }
+    }
+
+    ' --- Databases ---
+    database "MySQL 8.x\n:3306" as mysql #E3F2FD {
+        note as n5
+          Agent / Workflow / Tool configs
+          Conversation history
+          User / Permission
+          innodb_buffer_pool = 256M
+        end note
+    }
+
+    database "Redis 7.x\n:6379" as redis #FFEBEE {
+        note as n6
+          Cache (Agent / Model config)
+          JWT Session
+          Redis Stream (doc process queue)
+          maxmemory = 128MB, LRU
+        end note
+    }
+
+    database "PGVector\n:5432" as pgvector #E8F5E9 {
+        note as n7
+          Document chunks
+          Vector embeddings (1536 dim)
+          HNSW index (cosine)
+          knowledge_base / retrieval
+        end note
+    }
+}
+
+' ===== Connections =====
+user -down-> nginx : HTTPS request
+
+nginx -down-> web : static resources\n/*.html, /js, /css
+nginx -down-> server : /api/**\n/sse/** (proxy_buffering off)
+
+server -down-> mysql : HikariCP (15)\nCRUD
+server -down-> redis : Lettuce (15)\ncache / session / stream
+server -down-> pgvector : vector search\n(embedding similarity)
+
+server -right-> llm : WebClient + Netty\nSSE streaming\n(timeout: 30s/15s/180s)
+server -right-> ext_api : MCP tool call\n(HTTP)
+
+' ===== Internal flows =====
+chat -down-> provider : get LLM client
+chat -down-> agent : load config
+chat -down-> workflow : execute steps
+chat -down-> knowledge : RAG retrieval
+chat -down-> mcp : tool calling
+
+tomcat -[hidden]down- chat
+llm_pool -[hidden]down- provider
+biz_pool -[hidden]down- async
+
+' ===== Legend =====
+legend right
+  |= Color |= Type |
+  |<#E3F2FD>| Frontend / Database |
+  |<#FFF3E0>| Backend Application |
+  |<#FFE0B2>| Core Engine (Chat) |
+  |<#FFCDD2>| LLM / Resilience |
+  |<#C8E6C9>| Knowledge / Async |
+  |<#D1C4E9>| Workflow |
+  |<#F0F4C3>| MCP Tools |
+endlegend
+
+@enduml
