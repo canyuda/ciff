@@ -14,3 +14,14 @@ target/
 
 # Environment
 *.env
+
+# Frontend
+node_modules/
+dist/
+*.local
+
+# Runtime
+.run/
+
+# Package
+ciff.tar.gz
