@@ -64,6 +64,7 @@
 - [接口规范](rules/07-api-specification.md) — REST API 设计规范
 - [Java 编码规范](rules/08-java-coding.md) — 命名、异常处理、日志、并发（基于阿里巴巴 Java 开发手册）
 - [测试规范](rules/09-testing.md) — 测试分层、命名约定、编写规范、禁止事项
+- [前端开发规范](rules/10-frontend.md) — 设计系统、公共组件、编码规范、页面模板、API 层规范
 
 ## 行为指令
 

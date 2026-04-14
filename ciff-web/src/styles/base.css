@@ -1,0 +1,121 @@
+/*
+ * Ciff Base Styles
+ * Global resets, typography defaults, and utility classes.
+ */
+
+/* ---- Global Reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--ciff-text-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--ciff-font-body);
+  color: var(--ciff-text-primary);
+  background-color: var(--ciff-bg-page);
+  line-height: var(--ciff-leading-normal);
+}
+
+/* ---- Headings ---- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ciff-font-heading);
+  font-weight: var(--ciff-font-semibold);
+  line-height: var(--ciff-leading-tight);
+  color: var(--ciff-text-primary);
+}
+
+h1 { font-size: var(--ciff-text-3xl); font-weight: var(--ciff-font-bold); }
+h2 { font-size: var(--ciff-text-2xl); }
+h3 { font-size: var(--ciff-text-xl); }
+h4 { font-size: var(--ciff-text-lg); font-weight: var(--ciff-font-medium); }
+h5 { font-size: var(--ciff-text-md); font-weight: var(--ciff-font-medium); }
+h6 { font-size: var(--ciff-text-base); font-weight: var(--ciff-font-medium); }
+
+/* ---- Code ---- */
+code, pre, kbd, samp {
+  font-family: var(--ciff-font-mono);
+  font-size: 0.9em;
+}
+
+code {
+  padding: 2px 6px;
+  background: var(--ciff-neutral-100);
+  border-radius: var(--ciff-radius-sm);
+  color: var(--ciff-primary-700);
+}
+
+pre {
+  padding: var(--ciff-space-4);
+  background: var(--ciff-neutral-900);
+  color: var(--ciff-neutral-200);
+  border-radius: var(--ciff-radius-md);
+  overflow-x: auto;
+  font-size: var(--ciff-text-sm);
+  line-height: var(--ciff-leading-relaxed);
+}
+
+pre code {
+  padding: 0;
+  background: none;
+  color: inherit;
+  border-radius: 0;
+}
+
+/* ---- Links ---- */
+a {
+  color: var(--ciff-text-link);
+  text-decoration: none;
+  transition: var(--ciff-transition-colors);
+}
+
+a:hover {
+  color: var(--ciff-text-link-hover);
+}
+
+/* ---- Selection ---- */
+::selection {
+  background: var(--ciff-primary-200);
+  color: var(--ciff-primary-900);
+}
+
+/* ---- Focus ring ---- */
+:focus-visible {
+  outline: 2px solid var(--ciff-border-focus);
+  outline-offset: 2px;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ciff-neutral-300);
+  border-radius: var(--ciff-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ciff-neutral-400);
+}
+
+/* ---- Utility: truncated text ---- */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

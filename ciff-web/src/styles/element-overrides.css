@@ -1,0 +1,183 @@
+/*
+ * Ciff Element Plus Theme Overrides
+ *
+ * Maps Ciff design tokens → Element Plus CSS variables.
+ * Must be imported AFTER Element Plus base styles.
+ */
+
+:root {
+  /* ---- Color ---- */
+  --el-color-primary:           var(--ciff-primary);
+  --el-color-primary-light-3:   var(--ciff-primary-300);
+  --el-color-primary-light-5:   var(--ciff-primary-200);
+  --el-color-primary-light-7:   var(--ciff-primary-100);
+  --el-color-primary-light-8:   var(--ciff-primary-50);
+  --el-color-primary-light-9:   #F0F0FF;
+  --el-color-primary-dark-2:    var(--ciff-primary-700);
+
+  --el-color-success:           var(--ciff-success);
+  --el-color-success-light-3:   #34D399;
+  --el-color-success-light-5:   #6EE7B7;
+  --el-color-success-light-7:   #A7F3D0;
+  --el-color-success-light-8:   #D1FAE5;
+  --el-color-success-light-9:   #ECFDF5;
+  --el-color-success-dark-2:    var(--ciff-success-dark);
+
+  --el-color-warning:           var(--ciff-warning);
+  --el-color-warning-light-3:   #FBBF24;
+  --el-color-warning-light-5:   #FCD34D;
+  --el-color-warning-light-7:   #FDE68A;
+  --el-color-warning-light-8:   #FEF3C7;
+  --el-color-warning-light-9:   #FFFBEB;
+  --el-color-warning-dark-2:    var(--ciff-warning-dark);
+
+  --el-color-danger:            var(--ciff-danger);
+  --el-color-danger-light-3:    #F87171;
+  --el-color-danger-light-5:    #FCA5A5;
+  --el-color-danger-light-7:    #FECACA;
+  --el-color-danger-light-8:    #FEE2E2;
+  --el-color-danger-light-9:    #FEF2F2;
+  --el-color-danger-dark-2:     var(--ciff-danger-dark);
+
+  --el-color-info:              var(--ciff-info);
+  --el-color-info-light-3:      #60A5FA;
+  --el-color-info-light-5:      #93C5FD;
+  --el-color-info-light-7:      #BFDBFE;
+  --el-color-info-light-8:      #DBEAFE;
+  --el-color-info-light-9:      #EFF6FF;
+  --el-color-info-dark-2:       var(--ciff-info-dark);
+
+  /* ---- Text ---- */
+  --el-color-text-primary:    var(--ciff-text-primary);
+  --el-color-text-regular:    var(--ciff-neutral-700);
+  --el-color-text-secondary:  var(--ciff-text-secondary);
+  --el-color-text-placeholder: var(--ciff-text-tertiary);
+  --el-text-color-primary:    var(--ciff-text-primary);
+  --el-text-color-regular:    var(--ciff-neutral-700);
+  --el-text-color-secondary:  var(--ciff-text-secondary);
+  --el-text-color-placeholder: var(--ciff-text-tertiary);
+
+  /* ---- Border ---- */
+  --el-border-color:         var(--ciff-border);
+  --el-border-color-light:   var(--ciff-border-light);
+  --el-border-color-lighter: var(--ciff-border-light);
+  --el-border-color-dark:    var(--ciff-border-dark);
+  --el-border-color-hover:   var(--ciff-neutral-300);
+
+  /* ---- Background ---- */
+  --el-bg-color:       var(--ciff-bg-card);
+  --el-bg-color-page:  var(--ciff-bg-page);
+  --el-bg-color-overlay: var(--ciff-bg-elevated);
+
+  --el-fill-color:        var(--ciff-neutral-100);
+  --el-fill-color-light:  var(--ciff-neutral-50);
+  --el-fill-color-lighter: var(--ciff-neutral-50);
+  --el-fill-color-blank:  var(--ciff-neutral-0);
+
+  /* ---- Border Radius ---- */
+  --el-border-radius-base:  var(--ciff-radius-base);
+  --el-border-radius-small: var(--ciff-radius-sm);
+  --el-border-radius-round: var(--ciff-radius-full);
+  --el-border-radius-circle: 50%;
+
+  /* ---- Box Shadow ---- */
+  --el-box-shadow:       var(--ciff-shadow-base);
+  --el-box-shadow-light: var(--ciff-shadow-sm);
+  --el-box-shadow-lighter: var(--ciff-shadow-xs);
+  --el-box-shadow-dark:  var(--ciff-shadow-md);
+
+  /* ---- Font ---- */
+  --el-font-family: var(--ciff-font-body);
+  --el-font-size-extra-large: var(--ciff-text-xl);
+  --el-font-size-large:       var(--ciff-text-lg);
+  --el-font-size-medium:      var(--ciff-text-base);
+  --el-font-size-base:        var(--ciff-text-base);
+  --el-font-size-small:       var(--ciff-text-sm);
+  --el-font-size-extra-small: var(--ciff-text-xs);
+
+  /* ---- Transition ---- */
+  --el-transition-duration: var(--ciff-duration-normal);
+  --el-transition-duration-fast: var(--ciff-duration-fast);
+
+  /* ---- Button ---- */
+  --el-button-font-weight: var(--ciff-font-medium);
+
+  /* ---- Table ---- */
+  --el-table-header-bg-color: var(--ciff-neutral-50);
+  --el-table-row-hover-bg-color: var(--ciff-neutral-50);
+  --el-table-border-color: var(--ciff-border-light);
+
+  /* ---- Menu (for sidebar) ---- */
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: var(--ciff-sidebar-text);
+  --el-menu-active-color: var(--ciff-sidebar-text-active);
+  --el-menu-hover-bg-color: var(--ciff-sidebar-bg-hover);
+  --el-menu-item-font-size: var(--ciff-text-sm);
+}
+
+/* ============================================================
+ * Button style overrides
+ * Primary → gradient | Default → outline | Danger → solid red
+ * ============================================================ */
+
+/* Primary: gradient */
+.el-button--primary {
+  background: var(--ciff-btn-gradient);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--ciff-shadow-primary);
+}
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background: var(--ciff-btn-gradient-hover);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: var(--ciff-shadow-primary-lg);
+}
+.el-button--primary:active {
+  background: var(--ciff-btn-gradient-active);
+  border-color: transparent;
+  color: #fff;
+}
+.el-button--primary.is-disabled,
+.el-button--primary.is-disabled:hover {
+  background: var(--ciff-btn-gradient);
+  border-color: transparent;
+  opacity: 0.5;
+}
+
+/* Default: white bg + border outline */
+.el-button--default {
+  background: var(--ciff-bg-card);
+  border-color: var(--ciff-border);
+  color: var(--ciff-text-primary);
+}
+.el-button--default:hover,
+.el-button--default:focus {
+  border-color: var(--ciff-primary-400);
+  color: var(--ciff-primary-600);
+  background: var(--ciff-primary-50);
+}
+
+/* Danger: red */
+.el-button--danger {
+  background: var(--ciff-danger);
+  border-color: var(--ciff-danger);
+  color: #fff;
+}
+.el-button--danger:hover,
+.el-button--danger:focus {
+  background: #DC2626;
+  border-color: #DC2626;
+  color: #fff;
+}
+
+/* ============================================================
+ * Card utility
+ * ============================================================ */
+.ciff-card {
+  background: var(--ciff-bg-card);
+  border-radius: var(--ciff-card-radius);
+  box-shadow: var(--ciff-card-shadow);
+  padding: var(--ciff-card-padding);
+}

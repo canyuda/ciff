@@ -1,63 +1,39 @@
 <template>
-  <el-container class="app-layout">
-    <el-aside width="200px">
-      <div class="logo">
-        <img src="@/assets/logo.svg" alt="Ciff" class="logo-icon" />
-        <span>Ciff</span>
+  <div class="app-layout">
+    <Sidebar />
+    <div class="app-layout__main">
+      <TopBar />
+      <div class="app-layout__content">
+        <router-view />
       </div>
-      <el-menu
-        :default-active="route.path"
-        router
-      >
-        <el-menu-item index="/provider">
-          <span>模型提供商管理</span>
-        </el-menu-item>
-        <el-menu-item index="/agent">
-          <span>Agent 管理</span>
-        </el-menu-item>
-        <el-menu-item index="/chat">
-          <span>对话</span>
-        </el-menu-item>
-      </el-menu>
-    </el-aside>
-    <el-main>
-      <router-view />
-    </el-main>
-  </el-container>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
-
-const route = useRoute()
+import Sidebar from '@/layouts/AppLayout.vue'
+import TopBar from '@/components/TopBar.vue'
 </script>
 
 <style scoped>
 .app-layout {
-  height: 100vh;
-}
-
-.el-aside {
-  border-right: 1px solid #e4e7ed;
-}
-
-.logo {
-  height: 56px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 20px;
-  font-weight: bold;
-  border-bottom: 1px solid #e4e7ed;
+  height: 100vh;
+  background: var(--ciff-bg-page);
 }
 
-.logo-icon {
-  width: 28px;
-  height: 28px;
+.app-layout__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.el-menu {
-  border-right: none;
+.app-layout__content {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--ciff-bg-secondary);
+  padding: var(--ciff-page-padding);
 }
 </style>

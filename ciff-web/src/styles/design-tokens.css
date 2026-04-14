@@ -1,0 +1,255 @@
+/*
+ * Ciff Design System Tokens
+ * Style: Calm Tech — Linear-inspired clean + indigo energy
+ *
+ * Font stack: Plus Jakarta Sans (headings) + DM Sans (body) + JetBrains Mono (code)
+ * Import from Google Fonts in index.html or via @import:
+ *   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+ */
+
+:root {
+  /* ============================================================
+   * PRIMARY — Indigo / Blue-Violet
+   * Core identity color. Buttons, links, active states, focus rings.
+   * ============================================================ */
+  --ciff-primary-50:  #EEF2FF;
+  --ciff-primary-100: #E0E7FF;
+  --ciff-primary-200: #C7D2FE;
+  --ciff-primary-300: #A5B4FC;
+  --ciff-primary-400: #818CF8;
+  --ciff-primary-500: #6366F1;
+  --ciff-primary-600: #4F46E5;
+  --ciff-primary-700: #4338CA;
+  --ciff-primary-800: #3730A3;
+  --ciff-primary-900: #312E81;
+
+  --ciff-primary:        var(--ciff-primary-500);
+  --ciff-primary-hover:  var(--ciff-primary-600);
+  --ciff-primary-active: var(--ciff-primary-700);
+  --ciff-primary-light:  var(--ciff-primary-100);
+  --ciff-primary-text:   #FFFFFF;
+
+  /* ============================================================
+   * ACCENT — Mint / Emerald
+   * Status indicators, data highlights, success states, badges.
+   * ============================================================ */
+  --ciff-accent-50:  #ECFDF5;
+  --ciff-accent-100: #D1FAE5;
+  --ciff-accent-200: #A7F3D0;
+  --ciff-accent-300: #6EE7B7;
+  --ciff-accent-400: #34D399;
+  --ciff-accent-500: #10B981;
+  --ciff-accent-600: #059669;
+  --ciff-accent-700: #047857;
+  --ciff-accent-800: #065F46;
+  --ciff-accent-900: #064E3B;
+
+  --ciff-accent:        var(--ciff-accent-500);
+  --ciff-accent-hover:  var(--ciff-accent-600);
+  --ciff-accent-active: var(--ciff-accent-700);
+  --ciff-accent-light:  var(--ciff-accent-100);
+
+  /* ============================================================
+   * SEMANTIC — Status colors
+   * ============================================================ */
+  --ciff-success:       #10B981;
+  --ciff-success-light: #D1FAE5;
+  --ciff-success-dark:  #047857;
+
+  --ciff-warning:       #F59E0B;
+  --ciff-warning-light: #FEF3C7;
+  --ciff-warning-dark:  #B45309;
+
+  --ciff-danger:        #EF4444;
+  --ciff-danger-light:  #FEE2E2;
+  --ciff-danger-dark:   #B91C1C;
+
+  --ciff-info:          #3B82F6;
+  --ciff-info-light:    #DBEAFE;
+  --ciff-info-dark:     #1D4ED8;
+
+  /* ============================================================
+   * NEUTRAL — Slate (warm gray with slight blue undertone)
+   * Backgrounds, borders, text hierarchy.
+   * ============================================================ */
+  --ciff-neutral-0:   #FFFFFF;
+  --ciff-neutral-50:  #F8FAFC;
+  --ciff-neutral-100: #F1F5F9;
+  --ciff-neutral-200: #E2E8F0;
+  --ciff-neutral-300: #CBD5E1;
+  --ciff-neutral-400: #94A3B8;
+  --ciff-neutral-500: #64748B;
+  --ciff-neutral-600: #475569;
+  --ciff-neutral-700: #334155;
+  --ciff-neutral-800: #1E293B;
+  --ciff-neutral-900: #0F172A;
+
+  /* ============================================================
+   * BACKGROUND
+   * ============================================================ */
+  --ciff-bg-page:      var(--ciff-neutral-50);    /* Main page bg */
+  --ciff-bg-secondary: var(--ciff-neutral-100);   /* Content area bg — cards sit on top */
+  --ciff-bg-card:      var(--ciff-neutral-0);     /* Card / panel bg */
+  --ciff-bg-elevated:  var(--ciff-neutral-0);     /* Elevated surface */
+  --ciff-bg-hover:     var(--ciff-neutral-100);   /* Row / item hover */
+  --ciff-bg-active:    var(--ciff-neutral-200);   /* Pressed state */
+  --ciff-bg-muted:     var(--ciff-neutral-100);   /* Muted fill */
+
+  /* ============================================================
+   * SIDEBAR — Deep navy, distinct from content area
+   * ============================================================ */
+  --ciff-sidebar-bg:           #0F172A;
+  --ciff-sidebar-bg-hover:     #1E293B;
+  --ciff-sidebar-bg-active:    rgba(99, 102, 241, 0.15);
+  --ciff-sidebar-border:       rgba(255, 255, 255, 0.06);
+  --ciff-sidebar-text:         #CBD5E1;
+  --ciff-sidebar-text-hover:   #F1F5F9;
+  --ciff-sidebar-text-active:  #FFFFFF;
+  --ciff-sidebar-icon:         #64748B;
+  --ciff-sidebar-icon-active:  var(--ciff-primary-400);
+  --ciff-sidebar-width:        220px;
+  --ciff-sidebar-collapsed:    64px;
+
+  /* ============================================================
+   * TEXT
+   * ============================================================ */
+  --ciff-text-primary:   var(--ciff-neutral-900);
+  --ciff-text-secondary: var(--ciff-neutral-500);
+  --ciff-text-tertiary:  var(--ciff-neutral-400);
+  --ciff-text-inverse:   #F8FAFC;
+  --ciff-text-link:      var(--ciff-primary-600);
+  --ciff-text-link-hover: var(--ciff-primary-700);
+
+  /* ============================================================
+   * BORDER
+   * ============================================================ */
+  --ciff-border:        var(--ciff-neutral-200);
+  --ciff-border-light:  var(--ciff-neutral-100);
+  --ciff-border-dark:   var(--ciff-neutral-300);
+  --ciff-border-focus:  var(--ciff-primary-400);
+
+  /* ============================================================
+   * TYPOGRAPHY
+   * ============================================================ */
+  --ciff-font-heading: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+  --ciff-font-body:    'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  --ciff-font-mono:    'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  --ciff-text-xs:   12px;
+  --ciff-text-sm:   13px;
+  --ciff-text-base: 14px;
+  --ciff-text-md:   15px;
+  --ciff-text-lg:   16px;
+  --ciff-text-xl:   18px;
+  --ciff-text-2xl:  20px;
+  --ciff-text-3xl:  24px;
+  --ciff-text-4xl:  30px;
+
+  --ciff-leading-tight:  1.25;
+  --ciff-leading-normal: 1.5;
+  --ciff-leading-relaxed: 1.625;
+
+  --ciff-font-normal:   400;
+  --ciff-font-medium:   500;
+  --ciff-font-semibold: 600;
+  --ciff-font-bold:     700;
+  --ciff-font-extrabold: 800;
+
+  /* ============================================================
+   * SPACING — 4px base unit
+   * ============================================================ */
+  --ciff-space-0:   0;
+  --ciff-space-px:  1px;
+  --ciff-space-0-5: 2px;
+  --ciff-space-1:   4px;
+  --ciff-space-1-5: 6px;
+  --ciff-space-2:   8px;
+  --ciff-space-2-5: 10px;
+  --ciff-space-3:   12px;
+  --ciff-space-4:   16px;
+  --ciff-space-5:   20px;
+  --ciff-space-6:   24px;
+  --ciff-space-8:   32px;
+  --ciff-space-10:  40px;
+  --ciff-space-12:  48px;
+  --ciff-space-16:  64px;
+  --ciff-space-20:  80px;
+
+  /* ============================================================
+   * BORDER RADIUS
+   * ============================================================ */
+  --ciff-radius-none:  0;
+  --ciff-radius-sm:    4px;
+  --ciff-radius-base:  6px;
+  --ciff-radius-md:    8px;
+  --ciff-radius-lg:    10px;
+  --ciff-radius-xl:    12px;
+  --ciff-radius-2xl:   16px;
+  --ciff-radius-full:  9999px;
+
+  /* ============================================================
+   * SHADOW — Layered elevation system
+   * ============================================================ */
+  --ciff-shadow-xs:    0 1px 2px rgba(15, 23, 42, 0.04);
+  --ciff-shadow-sm:    0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --ciff-shadow-base:  0 2px 4px -1px rgba(15, 23, 42, 0.06), 0 4px 6px -1px rgba(15, 23, 42, 0.04);
+  --ciff-shadow-md:    0 4px 6px -2px rgba(15, 23, 42, 0.06), 0 10px 15px -3px rgba(15, 23, 42, 0.06);
+  --ciff-shadow-lg:    0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 20px 25px -5px rgba(15, 23, 42, 0.06);
+  --ciff-shadow-xl:    0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 25px 50px -12px rgba(15, 23, 42, 0.12);
+
+  /* Primary-tinted shadow for buttons / interactive elements */
+  --ciff-shadow-primary:     0 2px 8px -2px rgba(99, 102, 241, 0.35);
+  --ciff-shadow-primary-lg:  0 8px 24px -4px rgba(99, 102, 241, 0.30);
+
+  /* ============================================================
+   * TRANSITION
+   * ============================================================ */
+  --ciff-duration-fast:   120ms;
+  --ciff-duration-normal: 200ms;
+  --ciff-duration-slow:   300ms;
+  --ciff-duration-slower: 450ms;
+
+  --ciff-ease-default:  cubic-bezier(0.4, 0, 0.2, 1);
+  --ciff-ease-in:       cubic-bezier(0.4, 0, 1, 1);
+  --ciff-ease-out:      cubic-bezier(0, 0, 0.2, 1);
+  --ciff-ease-in-out:   cubic-bezier(0.4, 0, 0.6, 1);
+  --ciff-ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Common transitions */
+  --ciff-transition-fast:    all var(--ciff-duration-fast) var(--ciff-ease-default);
+  --ciff-transition-normal:  all var(--ciff-duration-normal) var(--ciff-ease-default);
+  --ciff-transition-colors:  color var(--ciff-duration-normal) var(--ciff-ease-default),
+                             background-color var(--ciff-duration-normal) var(--ciff-ease-default),
+                             border-color var(--ciff-duration-normal) var(--ciff-ease-default),
+                             box-shadow var(--ciff-duration-normal) var(--ciff-ease-default);
+
+  /* ============================================================
+   * Z-INDEX
+   * ============================================================ */
+  --ciff-z-base:      0;
+  --ciff-z-dropdown:  100;
+  --ciff-z-sticky:    200;
+  --ciff-z-overlay:   300;
+  --ciff-z-modal:     400;
+  --ciff-z-popover:   500;
+  --ciff-z-tooltip:   600;
+  --ciff-z-toast:     700;
+
+  /* ============================================================
+   * LAYOUT
+   * ============================================================ */
+  --ciff-header-height:    56px;
+  --ciff-content-max-width: 1280px;
+  --ciff-page-padding:     var(--ciff-space-6);
+  --ciff-card-padding:     var(--ciff-space-5);
+  --ciff-card-gap:         var(--ciff-space-4);
+  --ciff-card-radius:      var(--ciff-radius-xl);
+  --ciff-card-shadow:      var(--ciff-shadow-sm);
+
+  /* ============================================================
+   * BUTTON — Gradient presets
+   * ============================================================ */
+  --ciff-btn-gradient:      linear-gradient(135deg, #6366F1 0%, #818CF8 100%);
+  --ciff-btn-gradient-hover: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+  --ciff-btn-gradient-active: linear-gradient(135deg, #4338CA 0%, #4F46E5 100%);
+}
