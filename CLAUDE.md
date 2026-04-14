@@ -38,7 +38,7 @@
 - MyBatis-Plus 3.5.x
 - MySQL 8.x（主存储）
 - Redis 7.x（缓存 + 会话）
-- Spring AI 1.0.x（LLM 统一调用层）
+- WebClient + Reactor Netty（LLM HTTP 调用，同步 + SSE 流式）
 - Resilience4j 2.x（熔断 / 重试 / 限流）
 - Spring Boot Actuator（健康检查 + 基础指标）
 - Maven 项目构建

@@ -20,12 +20,6 @@
             <artifactId>ciff-common</artifactId>
         </dependency>
 
-        <!-- Spring AI (LLM unified calling layer) -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-starter-model-openai</artifactId>
-        </dependency>
-
         <!-- Resilience4j -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>

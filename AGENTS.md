@@ -25,7 +25,7 @@ Ciff 是一个面向 20-50 人小团队的简化版 Dify，定位于本地部署
 - **MyBatis-Plus 3.5.9**（ORM + 分页插件 + 自动填充 + 逻辑删除）
 - **MySQL 8.0.33**（主存储）
 - **Redis 7.x**（缓存 + 会话），通过 **Redisson 4.3.1** 接入
-- **Spring AI 1.0.0**（LLM 统一调用层）
+- **WebClient + Reactor Netty**（LLM HTTP 调用，同步 + SSE 流式）
 - **Resilience4j 2.2.0**（熔断 / 重试 / 限流 / 隔离）
 - **Spring Boot Actuator**（健康检查）
 - **Lombok**（全模块共享）
