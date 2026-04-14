@@ -1,6 +1,5 @@
 package com.ciff.app;
 
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -15,7 +14,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
                 org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration.class,
         }
 )
-@MapperScan("com.ciff.**.mapper")
 public class CiffApplication {
 
     public static void main(String[] args) {

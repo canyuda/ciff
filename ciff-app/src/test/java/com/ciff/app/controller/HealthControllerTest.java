@@ -1,6 +1,5 @@
 package com.ciff.app.controller;
 
-import com.ciff.common.dto.Result;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -22,6 +21,6 @@ class HealthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.message").value("success"))
-                .andExpect(jsonPath("$.data").value("成功"));
+                .andExpect(jsonPath("$.data").value("ok"));
     }
 }
