@@ -239,6 +239,7 @@
    * LAYOUT
    * ============================================================ */
   --ciff-header-height:    56px;
+  --ciff-sidebar-logo-height: 80px;
   --ciff-content-max-width: 1280px;
   --ciff-page-padding:     var(--ciff-space-6);
   --ciff-card-padding:     var(--ciff-space-5);

@@ -5,8 +5,6 @@ import com.ciff.app.dto.DemoItemUpdateRequest;
 import com.ciff.app.dto.DemoItemVO;
 import com.ciff.app.entity.DemoItemPO;
 
-import java.util.List;
-
 public final class DemoItemConvertor {
 
     private DemoItemConvertor() {
@@ -38,7 +36,4 @@ public final class DemoItemConvertor {
         return vo;
     }
 
-    public static List<DemoItemVO> toVOList(List<DemoItemPO> pos) {
-        return pos.stream().map(DemoItemConvertor::toVO).toList();
-    }
 }

@@ -104,7 +104,7 @@ const menuItems = [
   align-items: center;
   gap: var(--ciff-space-3);
   padding: var(--ciff-space-4) var(--ciff-space-4);
-  height: var(--ciff-header-height);
+  height: var(--ciff-sidebar-logo-height);
   border-bottom: 1px solid var(--ciff-sidebar-border);
 }
 

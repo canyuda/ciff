@@ -34,8 +34,9 @@
     <CiffFormDialog
       ref="dialogRef"
       title="提供商"
+      width="640px"
       :rules="rules"
-      @submit="handleSubmit"
+      :submit-handler="handleSubmit"
     >
       <template #default="{ data }">
         <el-form-item label="名称" prop="name">
@@ -47,9 +48,9 @@
           </el-select>
         </el-form-item>
         <el-form-item label="Base URL" prop="baseUrl">
-          <el-input v-model="data.baseUrl" :placeholder="baseUrlPlaceholder[data.type as string] || 'https://'">
+          <el-input v-model="data.baseUrl" :placeholder="baseUrlPlaceholder[data.type] || 'https://'">
             <template #append>
-              <el-button :disabled="!data.type" @click="data.baseUrl = baseUrlPlaceholder[data.type as string] || ''">填入</el-button>
+              <el-button :disabled="!data.type" @click="data.baseUrl = baseUrlPlaceholder[data.type] || ''">填入</el-button>
             </template>
           </el-input>
         </el-form-item>
@@ -75,14 +76,22 @@ import type { FormRules } from 'element-plus'
 // ---- Types ----
 
 interface Provider {
-  id: number
+  id?: number
   name: string
   type: string
   baseUrl: string
   apiKey: string
-  enabled: boolean
-  createdAt: string
+  enabled?: boolean
+  createdAt?: string
   [key: string]: unknown
+}
+
+interface TableRef {
+  refresh: () => void
+}
+
+interface DialogRef {
+  open: (data?: Partial<Provider>) => void
 }
 
 // ---- Mock data ----
@@ -219,8 +228,8 @@ const baseUrlPlaceholder: Record<string, string> = {
 
 // ---- Table config ----
 
-const tableRef = ref()
-const dialogRef = ref()
+const tableRef = ref<TableRef | null>(null)
+const dialogRef = ref<DialogRef | null>(null)
 
 const columns: TableColumn[] = [
   { label: '名称', prop: 'name', minWidth: 160 },
@@ -248,21 +257,22 @@ const rules: FormRules = {
   baseUrl: [{ required: true, message: '请输入 Base URL', trigger: 'blur' }],
 }
 
-async function handleSubmit(data: Provider, done: () => void) {
-  if (data.id) {
-    const idx = mockData.findIndex((item) => item.id === data.id)
-    if (idx !== -1) mockData[idx] = { ...mockData[idx], ...data }
+async function handleSubmit(form: Provider) {
+  if (form.id) {
+    const idx = mockData.findIndex((item) => item.id === form.id)
+    if (idx !== -1) {
+      mockData[idx] = { ...mockData[idx], ...form }
+    }
     notifySuccess('更新成功')
   } else {
     mockData.unshift({
-      ...data,
+      ...form,
       id: nextId++,
       enabled: true,
       createdAt: new Date().toLocaleString('zh-CN'),
     })
     notifySuccess('创建成功')
   }
-  done()
   tableRef.value?.refresh()
 }
 
@@ -270,7 +280,8 @@ async function handleSubmit(data: Provider, done: () => void) {
 
 const { confirm } = useConfirm()
 
-async function handleDelete(id: number) {
+async function handleDelete(id?: number) {
+  if (!id) return
   await confirm('确定要删除该提供商吗？删除后不可恢复。', () => {
     const idx = mockData.findIndex((item) => item.id === id)
     if (idx !== -1) mockData.splice(idx, 1)

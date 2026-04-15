@@ -35,27 +35,32 @@ public class LlmApiException extends RuntimeException {
 
     public static LlmApiException timeout(String url, long elapsedMs) {
         return new LlmApiException(ErrorType.TIMEOUT,
-                "LLM request timeout: " + url + ", elapsed: " + elapsedMs + "ms");
+                "LLM request timeout: " + maskUrl(url) + ", elapsed: " + elapsedMs + "ms");
     }
 
     public static LlmApiException authFailed(String url, String body) {
         return new LlmApiException(ErrorType.AUTH_FAILED, 401,
-                "LLM auth failed: " + url + ", response: " + truncate(body));
+                "LLM auth failed: " + maskUrl(url) + ", response: " + truncate(body));
     }
 
     public static LlmApiException rateLimited(String url, String body) {
         return new LlmApiException(ErrorType.RATE_LIMITED, 429,
-                "LLM rate limited: " + url + ", response: " + truncate(body));
+                "LLM rate limited: " + maskUrl(url) + ", response: " + truncate(body));
     }
 
     public static LlmApiException httpError(String url, int statusCode, String body) {
         return new LlmApiException(ErrorType.UNKNOWN, statusCode,
-                "LLM request failed: " + url + ", status: " + statusCode + ", response: " + truncate(body));
+                "LLM request failed: " + maskUrl(url) + ", status: " + statusCode + ", response: " + truncate(body));
     }
 
     public static LlmApiException unknown(String url, Throwable cause) {
         return new LlmApiException(ErrorType.UNKNOWN,
-                "LLM request error: " + url, cause);
+                "LLM request error: " + maskUrl(url), cause);
+    }
+
+    private static String maskUrl(String url) {
+        if (url == null) return "";
+        return url.replaceAll("([?&])(api_key|key|token|secret)=([^&]+)", "$1$2=***");
     }
 
     private static String truncate(String s) {

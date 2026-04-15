@@ -27,4 +27,15 @@ public class BizException extends RuntimeException {
         super(message, cause);
         this.code = errorCode.getCode();
     }
+
+    /** For module-specific error codes (e.g. 2001, 3001) not listed in ErrorCode enum. */
+    public BizException(int code, String message) {
+        super(message);
+        this.code = code;
+    }
+
+    public BizException(int code, String message, Throwable cause) {
+        super(message, cause);
+        this.code = code;
+    }
 }

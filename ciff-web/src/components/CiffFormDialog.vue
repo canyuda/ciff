@@ -1,6 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
+    class="ciff-form-dialog"
     :title="dialogTitle"
     :width="width"
     :close-on-click-modal="false"
@@ -9,12 +10,12 @@
   >
     <el-form
       ref="formRef"
-      :model="formData"
+      :model="currentFormData()"
       :rules="rules"
       label-width="90px"
-      label-position="left"
+      label-position="right"
     >
-      <slot :data="formData" :is-edit="isEdit" />
+      <slot :data="currentFormData()" :is-edit="isEdit" />
     </el-form>
 
     <template #footer>
@@ -27,7 +28,7 @@
 </template>
 
 <script setup lang="ts" generic="T extends Record<string, unknown>">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 
 const props = withDefaults(
@@ -35,20 +36,21 @@ const props = withDefaults(
     title: string
     width?: string | number
     rules?: FormRules
+    submitHandler?: (data: T) => void | Promise<void>
   }>(),
   {
     width: '520px',
   },
 )
 
-const emit = defineEmits<{
-  submit: [data: T, done: () => void]
+defineSlots<{
+  default?: (props: { data: T; isEdit: boolean }) => unknown
 }>()
 
 const visible = defineModel<boolean>({ default: false })
 
 const formRef = ref<FormInstance>()
-const formData = ref<Record<string, unknown>>({}) as { value: T }
+const formData = ref<T>({} as T)
 const isEdit = ref(false)
 const submitting = ref(false)
 
@@ -74,19 +76,20 @@ async function handleSubmit() {
   await formRef.value.validate()
   submitting.value = true
   try {
-    emit('submit', { ...formData.value } as T, () => {
-      visible.value = false
-    })
+    await props.submitHandler?.(cloneFormData())
+    visible.value = false
   } finally {
     submitting.value = false
   }
 }
 
+function cloneFormData() {
+  return { ...formData.value } as T
+}
+
+function currentFormData() {
+  return formData.value
+}
+
 defineExpose({ open })
 </script>
-
-<style>
-.el-form--label-left .el-form-item__label {
-  justify-content: flex-end;
-}
-</style>
