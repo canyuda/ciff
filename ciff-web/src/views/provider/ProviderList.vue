@@ -9,7 +9,7 @@
     <div class="ciff-card">
       <CiffTable ref="tableRef" :columns="columns" :api="fetchProviders">
         <template #type="{ row }">
-          <el-tag size="small" effect="dark" :color="typeColorMap[row.type]" style="border: none">{{ row.type }}</el-tag>
+          <el-tag size="small" effect="dark" :color="typeColorMap[row.type]" style="border: none">{{ providerNameMap[row.type] || row.type }}</el-tag>
         </template>
 
         <template #status="{ row }">
@@ -42,12 +42,16 @@
           <el-input v-model="data.name" placeholder="例如：OpenAI Production" />
         </el-form-item>
         <el-form-item label="类型" prop="type">
-          <el-select v-model="data.type" placeholder="请选择供应商类型" style="width: 100%">
-            <el-option v-for="t in providerTypes" :key="t" :label="t" :value="t" />
+          <el-select v-model="data.type" placeholder="请选择供应商类型" style="width: 100%" @change="data.baseUrl = ''">
+            <el-option v-for="t in providerTypes" :key="t" :label="providerNameMap[t] || t" :value="t" />
           </el-select>
         </el-form-item>
         <el-form-item label="Base URL" prop="baseUrl">
-          <el-input v-model="data.baseUrl" :placeholder="baseUrlPlaceholder[data.type as string] || 'https://'" />
+          <el-input v-model="data.baseUrl" :placeholder="baseUrlPlaceholder[data.type as string] || 'https://'">
+            <template #append>
+              <el-button :disabled="!data.type" @click="data.baseUrl = baseUrlPlaceholder[data.type as string] || ''">填入</el-button>
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item label="API Key" prop="apiKey">
           <el-input v-model="data.apiKey" type="password" show-password placeholder="sk-..." />
@@ -89,7 +93,7 @@ const mockData: Provider[] = [
   {
     id: 1,
     name: 'OpenAI Production',
-    type: 'OpenAI',
+    type: 'openai',
     baseUrl: 'https://api.openai.com',
     apiKey: 'sk-proj-xxxx...a1b2',
     enabled: true,
@@ -98,7 +102,7 @@ const mockData: Provider[] = [
   {
     id: 2,
     name: 'Claude API',
-    type: 'Claude',
+    type: 'claude',
     baseUrl: 'https://api.anthropic.com',
     apiKey: 'sk-ant-xxxx...c3d4',
     enabled: true,
@@ -107,7 +111,7 @@ const mockData: Provider[] = [
   {
     id: 3,
     name: 'Gemini Pro',
-    type: 'Gemini',
+    type: 'gemini',
     baseUrl: 'https://generativelanguage.googleapis.com',
     apiKey: 'AIza-xxxx...e5f6',
     enabled: false,
@@ -116,7 +120,7 @@ const mockData: Provider[] = [
   {
     id: 4,
     name: 'Ollama Local',
-    type: 'Ollama',
+    type: 'ollama',
     baseUrl: 'http://localhost:11434',
     apiKey: '',
     enabled: true,
@@ -125,7 +129,7 @@ const mockData: Provider[] = [
   {
     id: 5,
     name: 'DeepSeek V3',
-    type: 'DeepSeek',
+    type: 'deepseek',
     baseUrl: 'https://api.deepseek.com',
     apiKey: 'sk-xxxx...h1i2',
     enabled: true,
@@ -134,7 +138,7 @@ const mockData: Provider[] = [
   {
     id: 6,
     name: '通义千问生产',
-    type: '通义千问',
+    type: 'qwen',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     apiKey: 'sk-xxxx...j3k4',
     enabled: true,
@@ -143,7 +147,7 @@ const mockData: Provider[] = [
   {
     id: 7,
     name: 'Kimi 长文本',
-    type: 'Kimi',
+    type: 'kimi',
     baseUrl: 'https://api.moonshot.cn/v1',
     apiKey: 'sk-xxxx...l5m6',
     enabled: false,
@@ -151,54 +155,66 @@ const mockData: Provider[] = [
   },
 ]
 
-// Supported providers:
-// OpenAI-compatible:  OpenAI, Gemini, Ollama,
-//   DeepSeek, 通义千问(DashScope), 智谱, Kimi,
-//   文心一言(千帆V2), 豆包(火山引擎), 混元, 零一万物, MiniMax, 讯飞星火
-// Non-OpenAI:         Claude (Anthropic Messages API, /v1/messages)
-//
-// Note: Claude uses its own protocol, not compatible with OpenAI format.
-// 文心一言 → qianfan V2 (qianfan.baidubce.com/v2)
-// 混元 → api.hunyuan.cloud.tencent.com/v1
-// 讯飞星火 → spark-api-open.xf-yun.com/v1
+// Supported providers (English identifiers, stored in DB as t_provider.type):
+// OpenAI-compatible: openai, gemini, ollama, deepseek, qwen, zhipu, kimi,
+//                    wenxin, doubao, hunyuan, yi, minimax, spark
+// Non-OpenAI:        claude (Anthropic Messages API, /v1/messages)
 const providerTypes = [
-  'OpenAI', 'Claude', 'Gemini', 'Ollama',
-  'DeepSeek', '通义千问', '智谱', 'Kimi',
-  '文心一言', '豆包', '混元', '零一万物', 'MiniMax', '讯飞星火',
+  'openai', 'claude', 'gemini', 'ollama',
+  'deepseek', 'qwen', 'zhipu', 'kimi',
+  'wenxin', 'doubao', 'hunyuan', 'yi', 'minimax', 'spark',
 ]
 
+// Display name mapping (Chinese names for domestic providers only)
+const providerNameMap: Record<string, string> = {
+  openai: 'OpenAI',
+  claude: 'Claude',
+  gemini: 'Gemini',
+  ollama: 'Ollama',
+  deepseek: 'DeepSeek',
+  qwen: '通义千问',
+  zhipu: '智谱',
+  kimi: 'Kimi',
+  wenxin: '文心一言',
+  doubao: '豆包',
+  hunyuan: '混元',
+  yi: '零一万物',
+  minimax: 'MiniMax',
+  spark: '讯飞星火',
+}
+
 const typeColorMap: Record<string, string> = {
-  OpenAI:    'rgb(16, 163, 127)',
-  Claude:    'rgb(204, 120, 50)',
-  Gemini:    'rgb(66, 133, 244)',
-  Ollama:    'rgb(118, 100, 236)',
-  DeepSeek:  'rgb(68, 122, 255)',
-  '通义千问': 'rgb(255, 106, 0)',
-  '智谱':    'rgb(54, 179, 126)',
-  Kimi:      'rgb(30, 150, 219)',
-  '文心一言': 'rgb(36, 104, 242)',
-  '豆包':    'rgb(248, 100, 42)',
-  '混元':    'rgb(0, 170, 255)',
-  '零一万物': 'rgb(70, 100, 255)',
-  MiniMax:   'rgb(140, 80, 255)',
-  '讯飞星火': 'rgb(228, 56, 80)',
+  openai:    'rgb(16, 163, 127)',
+  claude:    'rgb(204, 120, 50)',
+  gemini:    'rgb(66, 133, 244)',
+  ollama:    'rgb(118, 100, 236)',
+  deepseek:  'rgb(68, 122, 255)',
+  qwen:      'rgb(255, 106, 0)',
+  zhipu:     'rgb(54, 179, 126)',
+  kimi:      'rgb(30, 150, 219)',
+  wenxin:    'rgb(36, 104, 242)',
+  doubao:    'rgb(248, 100, 42)',
+  hunyuan:   'rgb(0, 170, 255)',
+  yi:        'rgb(70, 100, 255)',
+  minimax:   'rgb(140, 80, 255)',
+  spark:     'rgb(228, 56, 80)',
 }
 
 const baseUrlPlaceholder: Record<string, string> = {
-  OpenAI:    'https://api.openai.com/v1',
-  Claude:    'https://api.anthropic.com',
-  Gemini:    'https://generativelanguage.googleapis.com/v1beta/openai/',
-  Ollama:    'http://localhost:11434',
-  DeepSeek:  'https://api.deepseek.com',
-  '通义千问': 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  '智谱':    'https://open.bigmodel.cn/api/paas/v4',
-  Kimi:      'https://api.moonshot.cn/v1',
-  '文心一言': 'https://qianfan.baidubce.com/v2',
-  '豆包':    'https://ark.cn-beijing.volces.com/api/v3',
-  '混元':    'https://hunyuan.tencentcloudapi.com',
-  '零一万物': 'https://api.lingyiwanwu.com/v1',
-  MiniMax:   'https://api.minimax.chat',
-  '讯飞星火': 'https://spark-api-open.xf-yun.com/v1',
+  openai:    'https://api.openai.com/v1',
+  claude:    'https://api.anthropic.com',
+  gemini:    'https://generativelanguage.googleapis.com/v1beta/openai/',
+  ollama:    'http://localhost:11434',
+  deepseek:  'https://api.deepseek.com',
+  qwen:      'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  zhipu:     'https://open.bigmodel.cn/api/paas/v4',
+  kimi:      'https://api.moonshot.cn/v1',
+  wenxin:    'https://qianfan.baidubce.com/v2',
+  doubao:    'https://ark.cn-beijing.volces.com/api/v3',
+  hunyuan:   'https://hunyuan.tencentcloudapi.com',
+  yi:        'https://api.lingyiwanwu.com/v1',
+  minimax:   'https://api.minimax.chat',
+  spark:     'https://spark-api-open.xf-yun.com/v1',
 }
 
 // ---- Table config ----

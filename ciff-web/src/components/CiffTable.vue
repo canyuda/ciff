@@ -27,12 +27,15 @@
     </el-table>
 
     <div v-if="showPagination && total > 0" class="ciff-table__pagination">
+      <span class="ciff-table__total">总条数 {{ total }}</span>
+      <el-select v-model="currentPageSize" class="ciff-table__sizes">
+        <el-option v-for="s in [10, 20, 50]" :key="s" :label="`每页条数: ${s}`" :value="s" />
+      </el-select>
       <el-pagination
         v-model:current-page="currentPage"
-        v-model:page-size="currentPageSize"
+        :page-size="currentPageSize"
         :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next"
+        layout="prev, pager, next"
         background
       />
     </div>
@@ -98,7 +101,19 @@ defineExpose({ refresh, fetchData })
 <style scoped>
 .ciff-table__pagination {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--ciff-space-4);
   padding-top: var(--ciff-space-4);
+}
+
+.ciff-table__total {
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ciff-table__sizes {
+  width: 150px;
 }
 </style>

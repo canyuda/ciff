@@ -1,4 +1,5 @@
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
+import {notifySuccess} from "@/utils/notify.ts";
 
 /**
  * Delete confirmation composable.
