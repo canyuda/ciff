@@ -6,6 +6,8 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.ciff.common.resilience.CircuitBreakerProperties;
+import com.ciff.common.resilience.CircuitBreakerService;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -22,7 +24,8 @@ class LlmHttpClientTest {
     void setUp() throws IOException {
         server = new MockWebServer();
         server.start();
-        client = new LlmHttpClient(Duration.ofSeconds(2), Duration.ofSeconds(1));
+        CircuitBreakerService cbService = new CircuitBreakerService(new CircuitBreakerProperties());
+        client = new LlmHttpClient(Duration.ofSeconds(2), Duration.ofSeconds(1), cbService);
     }
 
     @AfterEach
@@ -106,7 +109,8 @@ class LlmHttpClientTest {
                 .setBodyDelay(1, java.util.concurrent.TimeUnit.SECONDS));
 
         // 使用很短的超时便于测试
-        LlmHttpClient shortTimeoutClient = new LlmHttpClient(Duration.ofMillis(200), Duration.ofMillis(100));
+        CircuitBreakerService cbService = new CircuitBreakerService(new CircuitBreakerProperties());
+        LlmHttpClient shortTimeoutClient = new LlmHttpClient(Duration.ofMillis(200), Duration.ofMillis(100), cbService);
         String url = server.url("/v1/chat/completions").toString();
 
         LlmApiException ex = assertThrows(LlmApiException.class,

@@ -15,6 +15,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
+import com.ciff.common.resilience.CircuitBreakerService;
+
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -47,20 +49,34 @@ public class LlmHttpClient {
     private final WebClient streamClient;
     private final Duration firstTokenTimeout;
     private final Duration tokenIntervalTimeout;
+    private final CircuitBreakerService circuitBreakerService;
 
     public LlmHttpClient(
             @Value("${ciff.llm.timeout.first-token:30s}") Duration firstTokenTimeout,
-            @Value("${ciff.llm.timeout.token-interval:15s}") Duration tokenIntervalTimeout) {
+            @Value("${ciff.llm.timeout.token-interval:15s}") Duration tokenIntervalTimeout,
+            CircuitBreakerService circuitBreakerService) {
         this.syncClient = buildClient(CONNECT_TIMEOUT, SYNC_READ_TIMEOUT);
         this.streamClient = buildClient(CONNECT_TIMEOUT, STREAM_READ_TIMEOUT);
         this.firstTokenTimeout = firstTokenTimeout;
         this.tokenIntervalTimeout = tokenIntervalTimeout;
+        this.circuitBreakerService = circuitBreakerService;
     }
 
     /**
-     * 同步 POST 请求，阻塞等待完整响应。
+     * 同步 POST 请求，阻塞等待完整响应（无熔断保护）。
      */
     public String post(String url, Map<String, String> headers, String body) {
+        return doPost(url, headers, body);
+    }
+
+    /**
+     * 同步 POST 请求，带 per-provider 熔断和重试保护。
+     */
+    public String post(String providerName, String url, Map<String, String> headers, String body) {
+        return circuitBreakerService.execute(providerName, () -> doPost(url, headers, body));
+    }
+
+    private String doPost(String url, Map<String, String> headers, String body) {
         long start = System.currentTimeMillis();
 
         return syncClient.post()
@@ -84,12 +100,25 @@ public class LlmHttpClient {
     }
 
     /**
-     * SSE 流式 POST 请求。每个 SSE event 回调 callback。
-     *
-     * <p>在 stream() 方法中实现首 Token 和 Token 间隔超时检测：
-     * 通过 Flux 的 timeout 操作符，以动态计算的超时值检测数据到达情况。</p>
+     * SSE 流式 POST 请求（无熔断保护）。
      */
     public void stream(String url, Map<String, String> headers, String body, Consumer<String> callback) {
+        doStream(url, headers, body, callback);
+    }
+
+    /**
+     * SSE 流式 POST 请求，带 per-provider 熔断保护。
+     * 注意：SSE 流式场景下不重试（已开始输出后重试无意义），
+     * 仅在连接阶段（HTTP 错误）可能触发重试。
+     */
+    public void stream(String providerName, String url, Map<String, String> headers, String body, Consumer<String> callback) {
+        circuitBreakerService.execute(providerName, () -> {
+            doStream(url, headers, body, callback);
+            return null;
+        });
+    }
+
+    private void doStream(String url, Map<String, String> headers, String body, Consumer<String> callback) {
         long start = System.currentTimeMillis();
         AtomicBoolean firstTokenReceived = new AtomicBoolean(false);
         AtomicLong lastEventTime = new AtomicLong(System.currentTimeMillis());
