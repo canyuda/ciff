@@ -98,7 +98,7 @@ public class OpenAiCompatibleClient implements LlmChatClient {
         if (provider.getType() == ProviderType.OLLAMA) {
             url = baseUrl + "/api/tags";
         } else {
-            url = baseUrl + "/v1/models";
+            url = baseUrl + "/models";
         }
         return appendUrlAuth(url);
     }

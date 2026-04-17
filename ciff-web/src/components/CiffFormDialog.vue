@@ -27,7 +27,7 @@
   </el-dialog>
 </template>
 
-<script setup lang="ts" generic="T extends Record<string, unknown>">
+<script setup lang="ts" generic="T extends object">
 import { computed, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 

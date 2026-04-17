@@ -12,6 +12,7 @@ import com.ciff.common.util.PageHelper;
 import com.ciff.provider.convertor.ProviderConvertor;
 import com.ciff.provider.dto.ProviderCreateRequest;
 import com.ciff.provider.dto.ProviderHealthVO;
+import com.ciff.provider.dto.ProviderListItemVO;
 import com.ciff.provider.dto.ProviderUpdateRequest;
 import com.ciff.provider.dto.ProviderVO;
 import com.ciff.provider.entity.ModelPO;
@@ -23,8 +24,10 @@ import com.ciff.provider.mapper.ProviderMapper;
 import com.ciff.provider.service.ProviderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -92,7 +95,6 @@ public class ProviderServiceImpl implements ProviderService {
     }
 
     @Override
-    @Cacheable(cacheNames = "provider-cache", key = "'page:' + #page + ':' + #pageSize + ':' + (#type != null ? #type.name() : '') + ':' + (#status != null ? #status.name() : '')")
     public PageResult<ProviderVO> page(Integer page, Integer pageSize, ProviderType type, ProviderStatus status) {
         Page<ProviderPO> pageParam = PageHelper.toPage(page, pageSize);
 
@@ -103,6 +105,20 @@ public class ProviderServiceImpl implements ProviderService {
 
         Page<ProviderPO> result = providerMapper.selectPage(pageParam, wrapper);
         return PageHelper.toPageResult(result, ProviderConvertor::toVO);
+    }
+
+    @Override
+    public List<ProviderListItemVO> listAll() {
+        return providerMapper.selectList(
+                new LambdaQueryWrapper<ProviderPO>()
+                        .select(ProviderPO::getId, ProviderPO::getName)
+                        .orderByDesc(ProviderPO::getCreateTime)
+        ).stream().map(po -> {
+            ProviderListItemVO vo = new ProviderListItemVO();
+            vo.setId(po.getId());
+            vo.setName(po.getName());
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     private void validateNameUnique(String name, Long excludeId) {

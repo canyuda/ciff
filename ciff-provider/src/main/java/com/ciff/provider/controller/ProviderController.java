@@ -5,6 +5,7 @@ import com.ciff.common.dto.Result;
 import com.ciff.common.enums.ProviderStatus;
 import com.ciff.common.enums.ProviderType;
 import com.ciff.provider.dto.ProviderCreateRequest;
+import com.ciff.provider.dto.ProviderListItemVO;
 import com.ciff.provider.dto.ProviderUpdateRequest;
 import com.ciff.provider.dto.ProviderVO;
 import com.ciff.provider.dto.ProviderHealthVO;
@@ -24,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/providers")
@@ -81,5 +84,11 @@ public class ProviderController {
     public Result<ProviderHealthVO> getHealth(
             @Parameter(description = "供应商ID") @PathVariable Long id) {
         return Result.ok(healthService.getHealth(id));
+    }
+
+    @GetMapping("/list")
+    @Operation(summary = "查询所有供应商列表")
+    public Result<List<ProviderListItemVO>> listAll() {
+        return Result.ok(providerService.listAll());
     }
 }

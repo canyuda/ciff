@@ -1,31 +1,32 @@
 <template>
   <div class="page-container">
-    <PageHeader title="模型提供商管理" description="配置模型供应商及其接入参数，支持 OpenAI、Claude、Gemini、Ollama 等">
+    <PageHeader title="供应商管理" description="配置模型供应商及其接入参数，支持 OpenAI、Claude 等">
       <el-button type="primary" @click="dialogRef?.open()">
-        <el-icon><Plus /></el-icon>新增提供商
+        <el-icon><Plus /></el-icon>新增供应商
       </el-button>
     </PageHeader>
 
     <div class="ciff-card">
       <CiffTable ref="tableRef" :columns="columns" :api="fetchProviders">
         <template #type="{ row }">
-          <el-tag size="small" effect="dark" :color="typeColorMap[row.type]" style="border: none">{{ providerNameMap[row.type] || row.type }}</el-tag>
+          <el-tag size="small" effect="dark" :color="typeColorMap[row.type]" style="border: none">
+            {{ providerNameMap[row.type] || row.type }}
+          </el-tag>
+        </template>
+
+        <template #authType="{ row }">
+          <el-tag size="small" type="info">{{ authTypeMap[row.authType] || row.authType }}</el-tag>
         </template>
 
         <template #status="{ row }">
-          <el-switch
-            v-model="row.enabled"
-            style="--el-switch-on-color: #10B981; --el-switch-off-color: #F59E0B"
-            active-text="启用"
-            inactive-text="禁用"
-            inline-prompt
-          />
+          <el-tag v-if="row.status === 'active'" type="success" size="small">启用</el-tag>
+          <el-tag v-else type="info" size="small">禁用</el-tag>
         </template>
 
         <template #actions="{ row }">
           <div style="display: flex; gap: 8px">
-            <el-button type="primary" size="small" @click="dialogRef?.open(row)">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row.id)">删除</el-button>
+            <el-button link type="primary" @click="dialogRef?.open(row)">编辑</el-button>
+            <el-button link type="danger" @click="handleDelete(row.id)">删除</el-button>
           </div>
         </template>
       </CiffTable>
@@ -33,29 +34,47 @@
 
     <CiffFormDialog
       ref="dialogRef"
-      title="提供商"
+      title="供应商"
       width="640px"
       :rules="rules"
       :submit-handler="handleSubmit"
     >
-      <template #default="{ data }">
+      <template #default="{ data, isEdit }">
         <el-form-item label="名称" prop="name">
           <el-input v-model="data.name" placeholder="例如：OpenAI Production" />
         </el-form-item>
         <el-form-item label="类型" prop="type">
-          <el-select v-model="data.type" placeholder="请选择供应商类型" style="width: 100%" @change="data.baseUrl = ''">
+          <el-select
+            v-model="data.type"
+            placeholder="请选择供应商类型"
+            style="width: 100%"
+            :disabled="isEdit"
+            @change="data.apiBaseUrl = ''"
+          >
             <el-option v-for="t in providerTypes" :key="t" :label="providerNameMap[t] || t" :value="t" />
           </el-select>
         </el-form-item>
-        <el-form-item label="Base URL" prop="baseUrl">
-          <el-input v-model="data.baseUrl" :placeholder="baseUrlPlaceholder[data.type] || 'https://'">
+        <el-form-item label="认证方式" prop="authType">
+          <el-select v-model="data.authType" placeholder="请选择认证方式" style="width: 100%">
+            <el-option v-for="t in authTypes" :key="t" :label="authTypeMap[t] || t" :value="t" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Base URL" prop="apiBaseUrl">
+          <el-input v-model="data.apiBaseUrl" :placeholder="baseUrlPlaceholder[data.type] || 'https://'">
             <template #append>
-              <el-button :disabled="!data.type" @click="data.baseUrl = baseUrlPlaceholder[data.type] || ''">填入</el-button>
+              <el-button :disabled="!data.type" @click="data.apiBaseUrl = baseUrlPlaceholder[data.type] || ''">
+                填入
+              </el-button>
             </template>
           </el-input>
         </el-form-item>
         <el-form-item label="API Key" prop="apiKey">
-          <el-input v-model="data.apiKey" type="password" show-password placeholder="sk-..." />
+          <el-input
+            v-model="data.apiKey"
+            type="password"
+            show-password
+            :placeholder="isEdit ? '留空表示不修改' : 'sk-...'"
+          />
         </el-form-item>
       </template>
     </CiffFormDialog>
@@ -70,21 +89,19 @@ import CiffFormDialog from '@/components/CiffFormDialog.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { notifySuccess } from '@/utils/notify'
-import type { TableColumn } from '@/types/common'
+import {
+  getProviders,
+  createProvider,
+  updateProvider,
+  deleteProvider,
+  type Provider,
+  type ProviderCreateRequest,
+  type ProviderUpdateRequest,
+} from '@/api/provider'
+import type { TableColumn, PageParams } from '@/types/common'
 import type { FormRules } from 'element-plus'
 
 // ---- Types ----
-
-interface Provider {
-  id?: number
-  name: string
-  type: string
-  baseUrl: string
-  apiKey: string
-  enabled?: boolean
-  createdAt?: string
-  [key: string]: unknown
-}
 
 interface TableRef {
   refresh: () => void
@@ -94,87 +111,14 @@ interface DialogRef {
   open: (data?: Partial<Provider>) => void
 }
 
-// ---- Mock data ----
+// ---- Constants ----
 
-let nextId = 8
-
-const mockData: Provider[] = [
-  {
-    id: 1,
-    name: 'OpenAI Production',
-    type: 'openai',
-    baseUrl: 'https://api.openai.com',
-    apiKey: 'sk-proj-xxxx...a1b2',
-    enabled: true,
-    createdAt: '2025-01-15 10:30:00',
-  },
-  {
-    id: 2,
-    name: 'Claude API',
-    type: 'claude',
-    baseUrl: 'https://api.anthropic.com',
-    apiKey: 'sk-ant-xxxx...c3d4',
-    enabled: true,
-    createdAt: '2025-02-03 14:20:00',
-  },
-  {
-    id: 3,
-    name: 'Gemini Pro',
-    type: 'gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com',
-    apiKey: 'AIza-xxxx...e5f6',
-    enabled: false,
-    createdAt: '2025-02-20 09:15:00',
-  },
-  {
-    id: 4,
-    name: 'Ollama Local',
-    type: 'ollama',
-    baseUrl: 'http://localhost:11434',
-    apiKey: '',
-    enabled: true,
-    createdAt: '2025-03-10 16:45:00',
-  },
-  {
-    id: 5,
-    name: 'DeepSeek V3',
-    type: 'deepseek',
-    baseUrl: 'https://api.deepseek.com',
-    apiKey: 'sk-xxxx...h1i2',
-    enabled: true,
-    createdAt: '2025-03-15 08:30:00',
-  },
-  {
-    id: 6,
-    name: '通义千问生产',
-    type: 'qwen',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    apiKey: 'sk-xxxx...j3k4',
-    enabled: true,
-    createdAt: '2025-03-20 14:00:00',
-  },
-  {
-    id: 7,
-    name: 'Kimi 长文本',
-    type: 'kimi',
-    baseUrl: 'https://api.moonshot.cn/v1',
-    apiKey: 'sk-xxxx...l5m6',
-    enabled: false,
-    createdAt: '2025-04-01 10:20:00',
-  },
-]
-
-// Supported providers (English identifiers, stored in DB as t_provider.type):
-// OpenAI-compatible: openai, gemini, ollama, deepseek, qwen, zhipu, kimi,
-//                    wenxin, doubao, hunyuan, yi, minimax, spark
-// Non-OpenAI:        claude (Anthropic Messages API, /v1/messages)
 const providerTypes = [
   'openai', 'claude', 'gemini', 'ollama',
   'deepseek', 'qwen', 'zhipu', 'kimi',
   'wenxin', 'doubao', 'hunyuan', 'yi', 'minimax', 'spark',
 ]
 
-// Display name mapping (Chinese names for domestic providers only)
 const providerNameMap: Record<string, string> = {
   openai: 'OpenAI',
   claude: 'Claude',
@@ -209,6 +153,16 @@ const typeColorMap: Record<string, string> = {
   spark:     'rgb(228, 56, 80)',
 }
 
+const authTypes = ['bearer', 'api_key_header', 'url', 'jwt', 'dual_key']
+
+const authTypeMap: Record<string, string> = {
+  bearer: 'Bearer Token',
+  api_key_header: 'API Key Header',
+  url: 'URL 参数',
+  jwt: 'JWT',
+  dual_key: '双密钥',
+}
+
 const baseUrlPlaceholder: Record<string, string> = {
   openai:    'https://api.openai.com/v1',
   claude:    'https://api.anthropic.com',
@@ -234,18 +188,17 @@ const dialogRef = ref<DialogRef | null>(null)
 const columns: TableColumn[] = [
   { label: '名称', prop: 'name', minWidth: 160 },
   { label: '类型', slot: 'type', width: 110, align: 'center' },
-  { label: 'Base URL', prop: 'baseUrl', minWidth: 240 },
-  { label: '状态', slot: 'status', width: 90, align: 'center' },
-  { label: '创建时间', prop: 'createdAt', width: 170 },
+  { label: '认证方式', slot: 'authType', width: 140, align: 'center' },
+  { label: 'Base URL', prop: 'apiBaseUrl', minWidth: 240 },
+  { label: '状态', slot: 'status', width: 80, align: 'center' },
+  { label: '创建时间', prop: 'createTime', width: 170 },
   { label: '操作', slot: 'actions', width: 130, fixed: 'right' },
 ]
 
-function fetchProviders(params: { page: number; pageSize: number }) {
-  const start = (params.page - 1) * params.pageSize
-  const end = start + params.pageSize
-  return Promise.resolve({
-    list: mockData.slice(start, end),
-    total: mockData.length,
+async function fetchProviders(params: PageParams) {
+  return getProviders({
+    page: params.page,
+    pageSize: params.pageSize,
   })
 }
 
@@ -254,23 +207,32 @@ function fetchProviders(params: { page: number; pageSize: number }) {
 const rules: FormRules = {
   name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
   type: [{ required: true, message: '请选择类型', trigger: 'change' }],
-  baseUrl: [{ required: true, message: '请输入 Base URL', trigger: 'blur' }],
+  authType: [{ required: true, message: '请选择认证方式', trigger: 'change' }],
+  apiBaseUrl: [{ required: true, message: '请输入 Base URL', trigger: 'blur' }],
 }
 
 async function handleSubmit(form: Provider) {
   if (form.id) {
-    const idx = mockData.findIndex((item) => item.id === form.id)
-    if (idx !== -1) {
-      mockData[idx] = { ...mockData[idx], ...form }
+    const payload: ProviderUpdateRequest = {
+      name: form.name,
+      type: form.type,
+      authType: form.authType,
+      apiBaseUrl: form.apiBaseUrl,
     }
+    if (form.apiKey && form.apiKey.trim()) {
+      payload.apiKey = form.apiKey.trim()
+    }
+    await updateProvider(form.id, payload)
     notifySuccess('更新成功')
   } else {
-    mockData.unshift({
-      ...form,
-      id: nextId++,
-      enabled: true,
-      createdAt: new Date().toLocaleString('zh-CN'),
-    })
+    const payload: ProviderCreateRequest = {
+      name: form.name,
+      type: form.type,
+      authType: form.authType,
+      apiBaseUrl: form.apiBaseUrl,
+      apiKey: form.apiKey && form.apiKey.trim() ? form.apiKey.trim() : undefined,
+    }
+    await createProvider(payload)
     notifySuccess('创建成功')
   }
   tableRef.value?.refresh()
@@ -282,10 +244,8 @@ const { confirm } = useConfirm()
 
 async function handleDelete(id?: number) {
   if (!id) return
-  await confirm('确定要删除该提供商吗？删除后不可恢复。', () => {
-    const idx = mockData.findIndex((item) => item.id === id)
-    if (idx !== -1) mockData.splice(idx, 1)
-    return Promise.resolve()
+  await confirm('确定要删除该供应商吗？删除后不可恢复。', async () => {
+    await deleteProvider(id)
   })
   tableRef.value?.refresh()
 }

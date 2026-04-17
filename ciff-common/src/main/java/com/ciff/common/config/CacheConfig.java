@@ -1,5 +1,6 @@
 package com.ciff.common.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,14 +29,14 @@ public class CacheConfig {
     );
 
     @Bean
-    public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+    public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory, ObjectMapper objectMapper) {
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(DEFAULT_TTL)
                 .prefixCacheNameWith(KEY_PREFIX)
                 .serializeKeysWith(RedisSerializationContext.SerializationPair
                         .fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(new GenericJackson2JsonRedisSerializer()));
+                        .fromSerializer(new GenericJackson2JsonRedisSerializer(objectMapper)));
 
         Map<String, RedisCacheConfiguration> cacheConfigurations = CACHE_TTL.entrySet().stream()
                 .collect(Collectors.toMap(
