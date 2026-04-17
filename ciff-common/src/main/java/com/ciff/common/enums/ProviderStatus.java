@@ -5,16 +5,17 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Provider entity status.
+ * Controls whether the provider participates in routing and health checks.
+ */
 @Getter
 @RequiredArgsConstructor
-public enum AuthType {
+public enum ProviderStatus {
 
-    BEARER("bearer"),
-    API_KEY_HEADER("api_key_header"),
-    URL("url"),
-    JWT("jwt"),
-    DUAL_KEY("dual_key");
-    @JsonValue
+    ACTIVE("active"),
+    INACTIVE("inactive");
     @EnumValue
-    private final String type;
+    @JsonValue
+    private final String value;
 }

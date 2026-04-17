@@ -2,9 +2,13 @@ package com.ciff.provider.controller;
 
 import com.ciff.common.dto.PageResult;
 import com.ciff.common.dto.Result;
+import com.ciff.common.enums.ProviderStatus;
+import com.ciff.common.enums.ProviderType;
 import com.ciff.provider.dto.ProviderCreateRequest;
 import com.ciff.provider.dto.ProviderUpdateRequest;
 import com.ciff.provider.dto.ProviderVO;
+import com.ciff.provider.dto.ProviderHealthVO;
+import com.ciff.provider.service.ProviderHealthService;
 import com.ciff.provider.service.ProviderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProviderController {
 
     private final ProviderService providerService;
+    private final ProviderHealthService healthService;
 
     @PostMapping
     @Operation(summary = "创建供应商")
@@ -63,7 +68,18 @@ public class ProviderController {
     public Result<PageResult<ProviderVO>> page(
             @Parameter(description = "页码，从1开始") @RequestParam(required = false) Integer page,
             @Parameter(description = "每页条数，最大100") @RequestParam(required = false) Integer pageSize,
+            @Parameter(description = "类型筛选") @RequestParam(required = false) ProviderType type,
             @Parameter(description = "状态筛选") @RequestParam(required = false) String status) {
-        return Result.ok(providerService.page(page, pageSize, status));
+        ProviderStatus statusEnum = status != null && !status.isEmpty()
+                ? ProviderStatus.valueOf(status.toUpperCase())
+                : null;
+        return Result.ok(providerService.page(page, pageSize, type, statusEnum));
+    }
+
+    @GetMapping("/{id}/health")
+    @Operation(summary = "查询供应商健康状态")
+    public Result<ProviderHealthVO> getHealth(
+            @Parameter(description = "供应商ID") @PathVariable Long id) {
+        return Result.ok(healthService.getHealth(id));
     }
 }

@@ -1,5 +1,7 @@
 package com.ciff.common.enums;
 
+import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -21,7 +23,8 @@ public enum ProviderType {
     YI("yi", "零一万物"),
     MINIMAX("minimax", "MiniMax"),
     SPARK("spark", "星火");
-
+    @JsonValue
+    @EnumValue
     private final String type;
     private final String displayName;
 }

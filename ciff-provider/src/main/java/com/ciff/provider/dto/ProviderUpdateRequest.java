@@ -1,6 +1,7 @@
 package com.ciff.provider.dto;
 
 import com.ciff.common.enums.AuthType;
+import com.ciff.common.enums.ProviderStatus;
 import com.ciff.common.enums.ProviderType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
@@ -30,5 +31,5 @@ public class ProviderUpdateRequest {
     private ProviderAuthConfig authConfig;
 
     @Schema(description = "状态", example = "active")
-    private String status;
+    private ProviderStatus status;
 }

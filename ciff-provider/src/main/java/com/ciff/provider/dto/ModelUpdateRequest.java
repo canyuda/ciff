@@ -1,5 +1,6 @@
 package com.ciff.provider.dto;
 
+import com.ciff.common.enums.ProviderStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -25,5 +26,5 @@ public class ModelUpdateRequest {
     private String defaultParams;
 
     @Schema(description = "状态", example = "active")
-    private String status;
+    private ProviderStatus status;
 }

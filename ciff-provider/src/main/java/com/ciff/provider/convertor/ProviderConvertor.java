@@ -1,5 +1,6 @@
 package com.ciff.provider.convertor;
 
+import com.ciff.common.enums.ProviderStatus;
 import com.ciff.provider.dto.ProviderCreateRequest;
 import com.ciff.provider.dto.ProviderUpdateRequest;
 import com.ciff.provider.dto.ProviderVO;
@@ -21,7 +22,7 @@ public final class ProviderConvertor {
         po.setAuthType(request.getAuthType());
         po.setApiBaseUrl(request.getApiBaseUrl());
         po.setAuthConfig(request.getAuthConfig());
-        po.setStatus("active");
+        po.setStatus(ProviderStatus.ACTIVE);
         return po;
     }
 
@@ -57,7 +58,7 @@ public final class ProviderConvertor {
         vo.setApiBaseUrl(po.getApiBaseUrl());
         vo.setApiKeyMasked(maskApiKey(po.getApiKeyEncrypted()));
         vo.setAuthConfig(po.getAuthConfig());
-        vo.setStatus(po.getStatus());
+        vo.setStatus(po.getStatus() != null ? po.getStatus().getValue() : null);
         vo.setCreateTime(po.getCreateTime());
         vo.setUpdateTime(po.getUpdateTime());
         return vo;

@@ -5,16 +5,18 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Provider health check status.
+ * Updated by ProviderHealthScheduler based on probe results.
+ */
 @Getter
 @RequiredArgsConstructor
-public enum AuthType {
+public enum HealthStatus {
 
-    BEARER("bearer"),
-    API_KEY_HEADER("api_key_header"),
-    URL("url"),
-    JWT("jwt"),
-    DUAL_KEY("dual_key");
-    @JsonValue
+    UP("UP"),
+    DOWN("DOWN"),
+    UNKNOWN("UNKNOWN");
     @EnumValue
-    private final String type;
+    @JsonValue
+    private final String value;
 }

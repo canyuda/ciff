@@ -2,6 +2,7 @@ package com.ciff.app.mapper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ciff.common.enums.AuthType;
+import com.ciff.common.enums.ProviderStatus;
 import com.ciff.common.enums.ProviderType;
 import com.ciff.provider.entity.ProviderPO;
 import com.ciff.provider.mapper.ProviderMapper;
@@ -66,16 +67,16 @@ class ProviderMapperTest {
     @Test
     void selectPage_withStatusFilter() {
         ProviderPO active = buildProvider("test-active", "https://a.com");
-        active.setStatus("active");
+        active.setStatus(ProviderStatus.ACTIVE);
         providerMapper.insert(active);
 
         ProviderPO inactive = buildProvider("test-inactive", "https://b.com");
-        inactive.setStatus("inactive");
+        inactive.setStatus(ProviderStatus.INACTIVE);
         providerMapper.insert(inactive);
 
         // Filter by status=active
         Long activeCount = providerMapper.selectCount(
-                new LambdaQueryWrapper<ProviderPO>().eq(ProviderPO::getStatus, "active"));
+                new LambdaQueryWrapper<ProviderPO>().eq(ProviderPO::getStatus, ProviderStatus.ACTIVE));
 
         assertTrue(activeCount >= 1);
     }
@@ -86,7 +87,7 @@ class ProviderMapperTest {
         po.setType(ProviderType.OPENAI);
         po.setAuthType(AuthType.BEARER);
         po.setApiBaseUrl(url);
-        po.setStatus("active");
+        po.setStatus(ProviderStatus.ACTIVE);
         return po;
     }
 }

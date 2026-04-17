@@ -1,8 +1,10 @@
 package com.ciff.app.controller;
 
 import com.ciff.common.dto.PageResult;
+import com.ciff.common.enums.ProviderStatus;
 import com.ciff.provider.controller.ProviderController;
 import com.ciff.provider.dto.ProviderVO;
+import com.ciff.provider.service.ProviderHealthService;
 import com.ciff.provider.service.ProviderService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,13 +37,16 @@ class ProviderControllerTest {
     @MockBean
     private ProviderService providerService;
 
+    @MockBean
+    private ProviderHealthService healthService;
+
     @Test
     void create_whenInputValid_shouldReturnOk() throws Exception {
         String body = """
                 {
                     "name": "OpenAI",
-                    "type": "OPENAI",
-                    "authType": "BEARER",
+                    "type": "openai",
+                    "authType": "bearer",
                     "apiBaseUrl": "https://api.openai.com",
                     "apiKey": "sk-test-123"
                 }
@@ -64,8 +69,8 @@ class ProviderControllerTest {
         String body = """
                 {
                     "name": "",
-                    "type": "OPENAI",
-                    "authType": "BEARER",
+                    "type": "openai",
+                    "authType": "bearer",
                     "apiBaseUrl": "https://api.openai.com"
                 }
                 """;
@@ -81,7 +86,7 @@ class ProviderControllerTest {
         String body = """
                 {
                     "name": "OpenAI",
-                    "authType": "BEARER",
+                    "authType": "bearer",
                     "apiBaseUrl": "https://api.openai.com"
                 }
                 """;
@@ -97,8 +102,8 @@ class ProviderControllerTest {
         String body = """
                 {
                     "name": "OpenAI",
-                    "type": "INVALID_TYPE",
-                    "authType": "BEARER",
+                    "type": "invalid_type",
+                    "authType": "bearer",
                     "apiBaseUrl": "https://api.openai.com"
                 }
                 """;
@@ -114,7 +119,7 @@ class ProviderControllerTest {
         String body = """
                 {
                     "name": "OpenAI",
-                    "type": "OPENAI",
+                    "type": "openai",
                     "apiBaseUrl": "https://api.openai.com"
                 }
                 """;
@@ -130,8 +135,8 @@ class ProviderControllerTest {
         String body = """
                 {
                     "name": "OpenAI",
-                    "type": "OPENAI",
-                    "authType": "BEARER",
+                    "type": "openai",
+                    "authType": "bearer",
                     "apiBaseUrl": ""
                 }
                 """;
@@ -184,7 +189,7 @@ class ProviderControllerTest {
     void page_shouldReturnPageResult() throws Exception {
         ProviderVO vo = buildVO(1L, "OpenAI", "openai", "bearer");
         PageResult<ProviderVO> pageResult = new PageResult<>(List.of(vo), 1L, 1, 20);
-        given(providerService.page(any(), any(), eq("active"))).willReturn(pageResult);
+        given(providerService.page(any(), any(), any(), eq(ProviderStatus.ACTIVE))).willReturn(pageResult);
 
         mockMvc.perform(get("/api/v1/providers")
                         .param("page", "1")
@@ -196,13 +201,25 @@ class ProviderControllerTest {
     }
 
     @Test
-    void page_withoutStatus_shouldReturnOk() throws Exception {
+    void page_withoutFilters_shouldReturnOk() throws Exception {
         PageResult<ProviderVO> pageResult = new PageResult<>(List.of(), 0L, 1, 20);
-        given(providerService.page(any(), any(), any())).willReturn(pageResult);
+        given(providerService.page(any(), any(), any(), any())).willReturn(pageResult);
 
         mockMvc.perform(get("/api/v1/providers"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isMap());
+    }
+
+    @Test
+    void page_withTypeFilter_shouldReturnOk() throws Exception {
+        ProviderVO vo = buildVO(1L, "OpenAI", "openai", "bearer");
+        PageResult<ProviderVO> pageResult = new PageResult<>(List.of(vo), 1L, 1, 20);
+        given(providerService.page(any(), any(), any(), any())).willReturn(pageResult);
+
+        mockMvc.perform(get("/api/v1/providers")
+                        .param("type", "OPENAI"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list").isArray());
     }
 
     private ProviderVO buildVO(Long id, String name, String type, String authType) {

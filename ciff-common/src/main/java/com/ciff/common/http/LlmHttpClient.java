@@ -70,10 +70,53 @@ public class LlmHttpClient {
     }
 
     /**
+     * 同步 GET 请求，用于连通性探测（无熔断保护）。
+     * 只关心 HTTP 状态码，不关心响应体。
+     */
+    public void get(String url, Map<String, String> headers) {
+        doGet(url, headers);
+    }
+
+    /**
+     * 同步 GET 请求，带 per-provider 熔断和重试保护。
+     */
+    public void get(String providerName, String url, Map<String, String> headers) {
+        circuitBreakerService.execute(providerName, () -> {
+            doGet(url, headers);
+            return null;
+        });
+    }
+
+    /**
      * 同步 POST 请求，带 per-provider 熔断和重试保护。
      */
     public String post(String providerName, String url, Map<String, String> headers, String body) {
         return circuitBreakerService.execute(providerName, () -> doPost(url, headers, body));
+    }
+
+    private void doGet(String url, Map<String, String> headers) {
+        long start = System.currentTimeMillis();
+        syncClient.get()
+                .uri(url)
+                .headers(h -> {
+                    if (headers != null) {
+                        headers.forEach(h::set);
+                    }
+                })
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, resp ->
+                        resp.bodyToMono(String.class).flatMap(errorBody -> {
+                            int status = resp.statusCode().value();
+                            log.warn("LLM GET {} - status: {}, elapsed: {}ms", maskApiKey(url), status,
+                                    System.currentTimeMillis() - start);
+                            return Mono.error(mapError(status, errorBody, url));
+                        }))
+                .toBodilessEntity()
+                .doOnNext(result -> {
+                    long elapsed = System.currentTimeMillis() - start;
+                    log.info("LLM GET {} - status: 200, elapsed: {}ms", maskApiKey(url), elapsed);
+                })
+                .block();
     }
 
     private String doPost(String url, Map<String, String> headers, String body) {

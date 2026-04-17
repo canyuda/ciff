@@ -2,6 +2,7 @@ package com.ciff.app.mapper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.ciff.common.enums.AuthType;
+import com.ciff.common.enums.ProviderStatus;
 import com.ciff.common.enums.ProviderType;
 import com.ciff.provider.entity.ModelPO;
 import com.ciff.provider.entity.ProviderPO;
@@ -89,7 +90,7 @@ class ModelMapperTest {
         provider.setType(ProviderType.OPENAI);
         provider.setAuthType(AuthType.BEARER);
         provider.setApiBaseUrl("https://api.test.com");
-        provider.setStatus("active");
+        provider.setStatus(ProviderStatus.ACTIVE);
         providerMapper.insert(provider);
         return provider.getId();
     }
@@ -100,7 +101,7 @@ class ModelMapperTest {
         po.setName(name);
         po.setDisplayName(displayName);
         po.setMaxTokens(4096);
-        po.setStatus("active");
+        po.setStatus(ProviderStatus.ACTIVE);
         return po;
     }
 }

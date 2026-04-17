@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.ciff.common.entity.SoftDeletableEntity;
 import com.ciff.common.enums.AuthType;
+import com.ciff.common.enums.ProviderStatus;
 import com.ciff.common.enums.ProviderType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -26,7 +27,7 @@ public class ProviderPO extends SoftDeletableEntity {
 
     private String apiKeyEncrypted;
 
-    private String status;
+    private ProviderStatus status;
 
     @TableField(value = "auth_config", typeHandler = JacksonTypeHandler.class)
     private ProviderAuthConfig authConfig;

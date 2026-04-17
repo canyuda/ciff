@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Schema(description = "供应商响应")
@@ -35,6 +36,12 @@ public class ProviderVO {
 
     @Schema(description = "状态")
     private String status;
+
+    @Schema(description = "关联模型列表")
+    private List<ModelVO> models;
+
+    @Schema(description = "健康状态")
+    private ProviderHealthVO health;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;

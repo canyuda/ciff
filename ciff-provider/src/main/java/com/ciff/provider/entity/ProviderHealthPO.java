@@ -2,6 +2,7 @@ package com.ciff.provider.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.ciff.common.entity.BaseEntity;
+import com.ciff.common.enums.HealthStatus;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -14,7 +15,7 @@ public class ProviderHealthPO extends BaseEntity {
 
     private Long providerId;
 
-    private String status;
+    private HealthStatus status;
 
     private Integer consecutiveFailures;
 

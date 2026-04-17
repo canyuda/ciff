@@ -1,6 +1,8 @@
 package com.ciff.provider.service;
 
 import com.ciff.common.dto.PageResult;
+import com.ciff.common.enums.ProviderStatus;
+import com.ciff.common.enums.ProviderType;
 import com.ciff.provider.dto.ProviderCreateRequest;
 import com.ciff.provider.dto.ProviderUpdateRequest;
 import com.ciff.provider.dto.ProviderVO;
@@ -15,5 +17,5 @@ public interface ProviderService {
 
     void delete(Long id);
 
-    PageResult<ProviderVO> page(Integer page, Integer pageSize, String status);
+    PageResult<ProviderVO> page(Integer page, Integer pageSize, ProviderType type, ProviderStatus status);
 }

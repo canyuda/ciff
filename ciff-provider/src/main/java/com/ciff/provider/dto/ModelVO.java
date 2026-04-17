@@ -28,7 +28,7 @@ public class ModelVO {
     private Integer maxTokens;
 
     @Schema(description = "默认参数")
-    private String defaultParams;
+    private ModelDefaultParam defaultParams;
 
     @Schema(description = "状态")
     private String status;
