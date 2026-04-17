@@ -42,6 +42,8 @@ springdoc:
     path: /v3/api-docs
 
 ciff:
+  security:
+    api-key-secret: ${CIFF_API_KEY_SECRET:MZt1MJ5RNA+UEWWsDjk0q0S4ydVVU9Dh}
   resilience:
     circuit-breaker:
       sliding-window-size: 10

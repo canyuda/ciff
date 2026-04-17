@@ -5,6 +5,7 @@ import com.ciff.common.dto.Result;
 import com.ciff.common.http.LlmApiException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -43,6 +44,13 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining("; "));
         log.warn("Validation failed: {}", message);
         return Result.fail(ErrorCode.PARAM_VALIDATION_FAILED.getCode(), message);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleMessageNotReadableException(HttpMessageNotReadableException e) {
+        log.warn("Request body parse error: {}", e.getMessage());
+        return Result.fail(ErrorCode.BAD_REQUEST.getCode(), "请求体解析失败: " + e.getMostSpecificCause().getMessage());
     }
 
     @ExceptionHandler(Exception.class)
