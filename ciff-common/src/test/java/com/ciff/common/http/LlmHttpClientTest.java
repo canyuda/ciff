@@ -120,6 +120,26 @@ class LlmHttpClientTest {
     }
 
     @Test
+    void stream_whenTokenIntervalTimeout_shouldThrowTimeout() {
+        // 模拟首 token 正常到达，但第二个 token 间隔过长，超过 tokenIntervalTimeout
+        server.enqueue(new MockResponse()
+                .setHeader("Content-Type", "text/event-stream")
+                .setBody("data: first\n\ndata: second\n\ndata: [DONE]\n\n")
+                // 首 token 立即发送，但 body 整体延迟 1.5s（超过 tokenIntervalTimeout）
+                .setBodyDelay(1500, java.util.concurrent.TimeUnit.MILLISECONDS));
+
+        CircuitBreakerService cbService = new CircuitBreakerService(new CircuitBreakerProperties());
+        // firstTokenTimeout 较长，tokenIntervalTimeout 很短
+        LlmHttpClient shortIntervalClient = new LlmHttpClient(Duration.ofSeconds(5), Duration.ofMillis(200), cbService);
+        String url = server.url("/v1/chat/completions").toString();
+
+        LlmApiException ex = assertThrows(LlmApiException.class,
+                () -> shortIntervalClient.stream(url, Map.of(), "{}", data -> {}));
+
+        assertEquals(LlmApiException.ErrorType.TIMEOUT, ex.getErrorType());
+    }
+
+    @Test
     void stream_whenHttpError_shouldThrowAppropriateException() {
         server.enqueue(new MockResponse().setResponseCode(401).setBody("unauthorized"));
 

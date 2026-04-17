@@ -9,8 +9,10 @@ import com.ciff.common.enums.ProviderType;
 import com.ciff.common.exception.BizException;
 import com.ciff.common.util.ApiKeyEncryptor;
 import com.ciff.common.util.PageHelper;
+import com.ciff.provider.convertor.ModelConvertor;
 import com.ciff.provider.convertor.ProviderConvertor;
 import com.ciff.provider.dto.ProviderCreateRequest;
+import com.ciff.provider.dto.ModelVO;
 import com.ciff.provider.dto.ProviderHealthVO;
 import com.ciff.provider.dto.ProviderListItemVO;
 import com.ciff.provider.dto.ProviderUpdateRequest;
@@ -27,6 +29,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -104,7 +107,31 @@ public class ProviderServiceImpl implements ProviderService {
                 .orderByDesc(ProviderPO::getCreateTime);
 
         Page<ProviderPO> result = providerMapper.selectPage(pageParam, wrapper);
-        return PageHelper.toPageResult(result, ProviderConvertor::toVO);
+        List<ProviderVO> records = result.getRecords().stream().map(ProviderConvertor::toVO).toList();
+
+        if (!records.isEmpty()) {
+            List<Long> providerIds = records.stream().map(ProviderVO::getId).toList();
+
+            List<ModelPO> modelList = modelMapper.selectList(
+                    new LambdaQueryWrapper<ModelPO>()
+                            .in(ModelPO::getProviderId, providerIds));
+            Map<Long, List<ModelVO>> modelMap = modelList.stream()
+                    .collect(Collectors.groupingBy(ModelPO::getProviderId,
+                            Collectors.mapping(ModelConvertor::toVO, Collectors.toList())));
+
+            List<ProviderHealthPO> healthList = healthMapper.selectList(
+                    new LambdaQueryWrapper<ProviderHealthPO>()
+                            .in(ProviderHealthPO::getProviderId, providerIds));
+            Map<Long, ProviderHealthPO> healthMap = healthList.stream()
+                    .collect(Collectors.toMap(ProviderHealthPO::getProviderId, h -> h, (a, b) -> a));
+
+            for (ProviderVO vo : records) {
+                vo.setModels(modelMap.getOrDefault(vo.getId(), List.of()));
+                vo.setHealth(buildHealthVO(healthMap.get(vo.getId()), vo.getId(), vo.getName()));
+            }
+        }
+
+        return PageResult.of(records, result.getTotal(), (int) result.getCurrent(), (int) result.getSize());
     }
 
     @Override
@@ -144,7 +171,10 @@ public class ProviderServiceImpl implements ProviderService {
         ProviderHealthPO health = healthMapper.selectOne(
                 new LambdaQueryWrapper<ProviderHealthPO>()
                         .eq(ProviderHealthPO::getProviderId, providerId));
+        return buildHealthVO(health, providerId, providerName);
+    }
 
+    private ProviderHealthVO buildHealthVO(ProviderHealthPO health, Long providerId, String providerName) {
         ProviderHealthVO vo = new ProviderHealthVO();
         vo.setProviderId(providerId);
         vo.setProviderName(providerName);

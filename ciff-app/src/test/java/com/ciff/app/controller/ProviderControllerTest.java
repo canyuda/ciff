@@ -3,6 +3,7 @@ package com.ciff.app.controller;
 import com.ciff.common.dto.PageResult;
 import com.ciff.common.enums.ProviderStatus;
 import com.ciff.provider.controller.ProviderController;
+import com.ciff.provider.dto.ProviderHealthVO;
 import com.ciff.provider.dto.ProviderVO;
 import com.ciff.provider.service.ProviderHealthService;
 import com.ciff.provider.service.ProviderService;
@@ -220,6 +221,20 @@ class ProviderControllerTest {
                         .param("type", "OPENAI"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.list").isArray());
+    }
+
+    @Test
+    void testProvider_shouldReturnHealth() throws Exception {
+        ProviderHealthVO health = new ProviderHealthVO();
+        health.setProviderId(1L);
+        health.setStatus("UP");
+        health.setLastLatencyMs(120);
+        given(healthService.testAndGetHealth(1L)).willReturn(health);
+
+        mockMvc.perform(post("/api/v1/providers/1/test"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("UP"))
+                .andExpect(jsonPath("$.data.lastLatencyMs").value(120));
     }
 
     private ProviderVO buildVO(Long id, String name, String type, String authType) {

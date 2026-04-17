@@ -5,6 +5,8 @@ import com.ciff.common.enums.HealthStatus;
 import com.ciff.provider.dto.ProviderHealthVO;
 import com.ciff.provider.entity.ProviderHealthPO;
 import com.ciff.provider.entity.ProviderPO;
+import com.ciff.provider.llm.LlmChatClient;
+import com.ciff.provider.llm.LlmChatClientFactory;
 import com.ciff.provider.mapper.ProviderHealthMapper;
 import com.ciff.provider.mapper.ProviderMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ public class ProviderHealthService {
 
     private final ProviderHealthMapper healthMapper;
     private final ProviderMapper providerMapper;
+    private final LlmChatClientFactory clientFactory;
 
     /**
      * Record probe success, reset consecutive failure count.
@@ -46,6 +49,29 @@ public class ProviderHealthService {
         health.setLastProbeTime(LocalDateTime.now());
         health.setStatus(determineStatus(health.getConsecutiveFailures()));
         saveOrUpdate(health);
+    }
+
+    /**
+     * Probe provider connectivity and return latest health status.
+     */
+    public ProviderHealthVO testAndGetHealth(Long providerId) {
+        ProviderPO provider = providerMapper.selectById(providerId);
+        if (provider == null) {
+            throw new IllegalArgumentException("Provider not found: " + providerId);
+        }
+
+        long start = System.currentTimeMillis();
+        try {
+            LlmChatClient client = clientFactory.create(provider);
+            client.probe();
+            int latencyMs = (int) (System.currentTimeMillis() - start);
+            recordSuccess(providerId, latencyMs);
+            log.debug("Provider {} manual health check success, latency: {}ms", provider.getName(), latencyMs);
+        } catch (Exception e) {
+            recordFailure(providerId, e.getMessage());
+            log.warn("Provider {} manual health check failed: {}", provider.getName(), e.getMessage());
+        }
+        return getHealth(providerId);
     }
 
     /**

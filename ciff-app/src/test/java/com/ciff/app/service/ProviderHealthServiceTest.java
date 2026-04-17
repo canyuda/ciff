@@ -5,6 +5,8 @@ import com.ciff.common.enums.ProviderStatus;
 import com.ciff.provider.dto.ProviderHealthVO;
 import com.ciff.provider.entity.ProviderHealthPO;
 import com.ciff.provider.entity.ProviderPO;
+import com.ciff.provider.llm.LlmChatClient;
+import com.ciff.provider.llm.LlmChatClientFactory;
 import com.ciff.provider.mapper.ProviderHealthMapper;
 import com.ciff.provider.mapper.ProviderMapper;
 import com.ciff.provider.service.ProviderHealthService;
@@ -16,9 +18,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -30,6 +34,9 @@ class ProviderHealthServiceTest {
 
     @Mock
     private ProviderMapper providerMapper;
+
+    @Mock
+    private LlmChatClientFactory clientFactory;
 
     @InjectMocks
     private ProviderHealthService healthService;
@@ -139,5 +146,63 @@ class ProviderHealthServiceTest {
         assertThat(vo.getProviderId()).isEqualTo(1L);
         assertThat(vo.getStatus()).isEqualTo("UNKNOWN");
         assertThat(vo.getConsecutiveFailures()).isNull();
+    }
+
+    @Test
+    void testAndGetHealth_whenProbeSuccess_shouldRecordSuccessAndReturnVo() {
+        ProviderPO provider = new ProviderPO();
+        provider.setId(1L);
+        provider.setName("OpenAI");
+        given(providerMapper.selectById(1L)).willReturn(provider);
+
+        LlmChatClient client = org.mockito.Mockito.mock(LlmChatClient.class);
+        given(clientFactory.create(provider)).willReturn(client);
+
+        ProviderHealthPO health = new ProviderHealthPO();
+        health.setProviderId(1L);
+        health.setStatus(HealthStatus.UP);
+        health.setConsecutiveFailures(0);
+        given(healthMapper.selectOne(any())).willReturn(null, health);
+        given(healthMapper.insert(any(ProviderHealthPO.class))).willReturn(1);
+
+        ProviderHealthVO vo = healthService.testAndGetHealth(1L);
+
+        assertThat(vo.getProviderId()).isEqualTo(1L);
+        assertThat(vo.getStatus()).isEqualTo("UP");
+        verify(healthMapper).insert(any(ProviderHealthPO.class));
+    }
+
+    @Test
+    void testAndGetHealth_whenProbeFails_shouldRecordFailureAndReturnVo() {
+        ProviderPO provider = new ProviderPO();
+        provider.setId(1L);
+        provider.setName("OpenAI");
+        given(providerMapper.selectById(1L)).willReturn(provider);
+
+        LlmChatClient client = org.mockito.Mockito.mock(LlmChatClient.class);
+        given(clientFactory.create(provider)).willReturn(client);
+        doThrow(new RuntimeException("timeout")).when(client).probe();
+
+        ProviderHealthPO health = new ProviderHealthPO();
+        health.setProviderId(1L);
+        health.setStatus(HealthStatus.UNKNOWN);
+        health.setConsecutiveFailures(1);
+        given(healthMapper.selectOne(any())).willReturn(null, health);
+        given(healthMapper.insert(any(ProviderHealthPO.class))).willReturn(1);
+
+        ProviderHealthVO vo = healthService.testAndGetHealth(1L);
+
+        assertThat(vo.getProviderId()).isEqualTo(1L);
+        assertThat(vo.getStatus()).isEqualTo("UNKNOWN");
+        verify(healthMapper).insert(any(ProviderHealthPO.class));
+    }
+
+    @Test
+    void testAndGetHealth_whenProviderNotFound_shouldThrow() {
+        given(providerMapper.selectById(999L)).willReturn(null);
+
+        assertThatThrownBy(() -> healthService.testAndGetHealth(999L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Provider not found");
     }
 }

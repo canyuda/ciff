@@ -13,7 +13,8 @@ public enum AuthType {
     API_KEY_HEADER("api_key_header"),
     URL("url"),
     JWT("jwt"),
-    DUAL_KEY("dual_key");
+    DUAL_KEY("dual_key"),
+    NONE("none");
     @JsonValue
     @EnumValue
     private final String type;

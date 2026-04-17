@@ -84,11 +84,24 @@ export function getProviderHealth(id: number) {
   return get<ProviderHealthVO>(`/v1/providers/${id}/health`)
 }
 
+export function testProvider(id: number) {
+  return post<ProviderHealthVO>(`/v1/providers/${id}/test`)
+}
+
 export interface ProviderListItem {
   id: number
   name: string
 }
 
+export interface ProviderTypeOption {
+  type: string
+  displayName: string
+}
+
 export function getProviderList() {
   return get<ProviderListItem[]>('/v1/providers/list')
+}
+
+export function getProviderTypes() {
+  return get<ProviderTypeOption[]>('/v1/providers/types')
 }

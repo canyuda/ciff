@@ -26,7 +26,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/providers")
@@ -86,9 +88,24 @@ public class ProviderController {
         return Result.ok(healthService.getHealth(id));
     }
 
+    @PostMapping("/{id}/test")
+    @Operation(summary = "测试供应商连通性")
+    public Result<ProviderHealthVO> test(
+            @Parameter(description = "供应商ID") @PathVariable Long id) {
+        return Result.ok(healthService.testAndGetHealth(id));
+    }
+
     @GetMapping("/list")
     @Operation(summary = "查询所有供应商列表")
     public Result<List<ProviderListItemVO>> listAll() {
         return Result.ok(providerService.listAll());
+    }
+
+    @GetMapping("/types")
+    @Operation(summary = "查询所有供应商类型")
+    public Result<List<Map<String, String>>> types() {
+        return Result.ok(Arrays.stream(ProviderType.values())
+                .map(pt -> Map.of("type", pt.getType(), "displayName", pt.getDisplayName()))
+                .toList());
     }
 }
