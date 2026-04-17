@@ -44,6 +44,10 @@ springdoc:
 ciff:
   security:
     api-key-secret: ${CIFF_API_KEY_SECRET:MZt1MJ5RNA+UEWWsDjk0q0S4ydVVU9Dh}
+  llm:
+    timeout:
+      first-token: ${LLM_FIRST_TOKEN_TIMEOUT:30s}
+      token-interval: ${LLM_TOKEN_INTERVAL_TIMEOUT:15s}
   resilience:
     circuit-breaker:
       sliding-window-size: 10
