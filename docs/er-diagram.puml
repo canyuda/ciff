@@ -55,6 +55,21 @@ entity "t_model" as model #FFF3E0 {
     * update_time : DATETIME
 }
 
+entity "t_provider_health" as provider_health #FFF3E0 {
+    * id : BIGINT <<PK>>
+    --
+    * provider_id : BIGINT <<FK>>
+    * status : VARCHAR        -- healthy / unhealthy / unknown
+    * consecutive_failures : INT
+    * last_latency_ms : INT
+    * last_success_time : DATETIME
+    * last_failure_time : DATETIME
+    * last_failure_reason : VARCHAR
+    * last_probe_time : DATETIME
+    * create_time : DATETIME
+    * update_time : DATETIME
+}
+
 ' ===== Tool =====
 entity "t_tool" as tool #F0F4C3 {
     * id : BIGINT <<PK>>
@@ -208,6 +223,7 @@ user ||--o{ api_key : "generates"
 
 ' Provider & Model
 provider ||--o{ model : "provides"
+provider ||--o| provider_health : "monitored by"
 model ||--o{ agent : "used by"
 
 ' Agent relationships
@@ -230,7 +246,7 @@ doc ||--o{ chunk : "split into"
 conversation ||--o{ message : "contains"
 
 footer
-  MySQL: 13 tables (t_* with blue/orange/yellow/purple/green background)
+  MySQL: 14 tables (t_* with blue/orange/yellow/purple/green background)
   PGVector: 1 table (t_knowledge_chunk with green background)
 endfooter
 

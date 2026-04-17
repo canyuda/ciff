@@ -1,6 +1,7 @@
 -- ============================================================
 -- Ciff PGVector Schema
 -- PostgreSQL + PGVector extension
+-- Separate from MySQL schema - run against PGVector instance
 -- ============================================================
 
 -- Enable vector extension
