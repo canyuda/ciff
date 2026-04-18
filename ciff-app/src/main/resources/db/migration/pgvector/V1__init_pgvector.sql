@@ -1,7 +1,7 @@
 -- ============================================================
 -- Ciff PGVector Schema
 -- PostgreSQL + PGVector extension
--- Separate from MySQL schema - run against PGVector instance
+-- Managed by Flyway
 -- ============================================================
 
 -- Enable vector extension
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS t_knowledge_chunk (
     document_id     BIGINT                 NOT NULL,
     knowledge_id    BIGINT                 NOT NULL,
     content         TEXT                   NOT NULL,
-    embedding       VECTOR(1536)           NOT NULL,
+    embedding       VECTOR(1024)           NOT NULL,
     chunk_index     INT                    NOT NULL,
     create_time     TIMESTAMP              NOT NULL DEFAULT NOW()
 );

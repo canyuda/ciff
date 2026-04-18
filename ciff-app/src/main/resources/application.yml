@@ -20,6 +20,11 @@ spring:
       password: ${REDIS_PASSWORD:}
       database: ${REDIS_DATABASE:1}
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   configuration:
@@ -54,3 +59,10 @@ ciff:
       failure-rate-threshold: 50
       wait-duration-in-open-state: 30s
       permitted-number-of-calls-in-half-open-state: 3
+  pgvector:
+    url: jdbc:postgresql://${PGVECTOR_HOST:localhost}:${PGVECTOR_PORT:5432}/${PGVECTOR_DB:ciff}
+    username: ${PGVECTOR_USER:postgres}
+    password: ${PGVECTOR_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    maximum-pool-size: 10
+    connection-timeout: 30000
