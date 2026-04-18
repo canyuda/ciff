@@ -32,6 +32,12 @@
             <artifactId>mysql-connector-j</artifactId>
         </dependency>
 
+        <!-- SpringDoc OpenAPI (for @Schema annotations on DTOs) -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
