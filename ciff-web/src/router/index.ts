@@ -18,6 +18,11 @@ const router = createRouter({
       component: () => import('@/views/model/ModelList.vue'),
     },
     {
+      path: '/tool',
+      name: 'tool',
+      component: () => import('@/views/tool/ToolList.vue'),
+    },
+    {
       path: '/agent',
       name: 'agent',
       component: () => import('@/views/agent/AgentList.vue'),
