@@ -238,15 +238,3 @@ CREATE TABLE IF NOT EXISTS t_api_key (
     INDEX idx_api_key_agent_id (agent_id),
     INDEX idx_api_key_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='API key';
-
--- -----------------------------------------------------------
--- t_demo_item (CRUD demo)
--- -----------------------------------------------------------
-CREATE TABLE IF NOT EXISTS t_demo_item (
-    id              BIGINT AUTO_INCREMENT  PRIMARY KEY COMMENT 'PK',
-    name            VARCHAR(100)           NOT NULL COMMENT 'item name',
-    status          INT                    NOT NULL DEFAULT 0 COMMENT 'status',
-    deleted         TINYINT                NOT NULL DEFAULT 0 COMMENT '0=normal, 1=deleted',
-    create_time     DATETIME               NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'create time',
-    update_time     DATETIME               NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'update time'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='demo item';
