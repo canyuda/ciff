@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +32,7 @@ public class ToolServiceImpl implements ToolService {
     public ToolVO create(ToolCreateRequest request) {
         validateType(request.getType());
         validateNameUnique(request.getName(), null);
+        validateParamSchema(request.getParamSchema());
 
         ToolPO po = ToolConvertor.toPO(request);
         toolMapper.insert(po);
@@ -46,6 +48,9 @@ public class ToolServiceImpl implements ToolService {
         }
         if (request.getType() != null) {
             validateType(request.getType());
+        }
+        if (request.getParamSchema() != null) {
+            validateParamSchema(request.getParamSchema());
         }
 
         ToolConvertor.updatePO(po, request);
@@ -93,6 +98,16 @@ public class ToolServiceImpl implements ToolService {
         }
         if (toolMapper.selectCount(wrapper) > 0) {
             throw new BizException(ErrorCode.BAD_REQUEST, "工具名称已存在: " + name);
+        }
+    }
+
+    private void validateParamSchema(Map<String, Object> schema) {
+        if (schema == null) return;
+        if (!"object".equals(schema.get("type"))) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "paramSchema.type 必须为 object");
+        }
+        if (!(schema.get("properties") instanceof Map)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "paramSchema 必须包含 properties 对象");
         }
     }
 

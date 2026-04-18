@@ -44,7 +44,7 @@
         <template #actions="{ row }">
           <div style="display: flex; gap: 8px">
             <el-button link type="primary" @click="handleOpenModels(row)">模型管理</el-button>
-            <el-button link type="primary" @click="dialogRef?.open(row)">编辑</el-button>
+            <el-button link type="primary" @click="openEditDialog(row.id)">编辑</el-button>
             <el-button link type="warning" @click="handleTest(row)">测试</el-button>
             <el-button link type="danger" @click="handleDelete(row.id)">删除</el-button>
           </div>
@@ -162,6 +162,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import { notifySuccess } from '@/utils/notify'
 import {
   getProviders,
+  getProviderById,
   createProvider,
   updateProvider,
   deleteProvider,
@@ -315,6 +316,12 @@ function resolveAuthType(type?: string) {
   if (type === 'claude') return 'api_key_header'
   if (type === 'ollama') return 'none'
   return 'bearer'
+}
+
+async function openEditDialog(id?: number) {
+  if (!id) return
+  const detail = await getProviderById(id)
+  dialogRef.value?.open(detail)
 }
 
 async function fetchProviders(params: PageParams) {

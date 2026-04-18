@@ -131,6 +131,94 @@ class ToolServiceTest {
     }
 
     @Test
+    void create_whenParamSchemaMissingType_shouldThrowBizException() {
+        ToolCreateRequest request = new ToolCreateRequest();
+        request.setName("bad-schema");
+        request.setType("api");
+        request.setEndpoint("https://example.com");
+        request.setParamSchema(Map.of("properties", Map.of()));
+
+        assertThatThrownBy(() -> toolService.create(request))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("paramSchema.type 必须为 object");
+    }
+
+    @Test
+    void create_whenParamSchemaTypeNotObject_shouldThrowBizException() {
+        ToolCreateRequest request = new ToolCreateRequest();
+        request.setName("bad-schema");
+        request.setType("api");
+        request.setEndpoint("https://example.com");
+        request.setParamSchema(Map.of("type", "string", "properties", Map.of()));
+
+        assertThatThrownBy(() -> toolService.create(request))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("paramSchema.type 必须为 object");
+    }
+
+    @Test
+    void create_whenParamSchemaMissingProperties_shouldThrowBizException() {
+        ToolCreateRequest request = new ToolCreateRequest();
+        request.setName("bad-schema");
+        request.setType("api");
+        request.setEndpoint("https://example.com");
+        request.setParamSchema(Map.of("type", "object"));
+
+        assertThatThrownBy(() -> toolService.create(request))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("paramSchema 必须包含 properties 对象");
+    }
+
+    @Test
+    void create_whenParamSchemaPropertiesNotObject_shouldThrowBizException() {
+        ToolCreateRequest request = new ToolCreateRequest();
+        request.setName("bad-schema");
+        request.setType("api");
+        request.setEndpoint("https://example.com");
+        request.setParamSchema(Map.of("type", "object", "properties", "not-a-map"));
+
+        assertThatThrownBy(() -> toolService.create(request))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("paramSchema 必须包含 properties 对象");
+    }
+
+    @Test
+    void update_whenParamSchemaValid_shouldUpdate() {
+        ToolPO existing = new ToolPO();
+        existing.setId(1L);
+        existing.setName("weather-api");
+        existing.setType("api");
+        existing.setEndpoint("https://api.weather.com/v1");
+        existing.setStatus("enabled");
+
+        when(toolMapper.selectById(1L)).thenReturn(existing);
+        when(toolMapper.updateById(any(ToolPO.class))).thenReturn(1);
+
+        ToolUpdateRequest request = new ToolUpdateRequest();
+        request.setParamSchema(Map.of("type", "object", "properties", Map.of("city", Map.of("type", "string"))));
+
+        ToolVO vo = toolService.update(1L, request);
+
+        assertThat(vo.getParamSchema()).containsEntry("type", "object");
+    }
+
+    @Test
+    void update_whenParamSchemaInvalid_shouldThrowBizException() {
+        ToolPO existing = new ToolPO();
+        existing.setId(1L);
+        existing.setName("weather-api");
+
+        when(toolMapper.selectById(1L)).thenReturn(existing);
+
+        ToolUpdateRequest request = new ToolUpdateRequest();
+        request.setParamSchema(Map.of("type", "array"));
+
+        assertThatThrownBy(() -> toolService.update(1L, request))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("paramSchema.type 必须为 object");
+    }
+
+    @Test
     void update_whenValid_shouldUpdateAndReturnVo() {
         ToolPO existing = new ToolPO();
         existing.setId(1L);

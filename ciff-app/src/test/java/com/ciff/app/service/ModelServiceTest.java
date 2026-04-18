@@ -1,5 +1,6 @@
 package com.ciff.app.service;
 
+import com.ciff.common.constant.ErrorCode;
 import com.ciff.common.exception.BizException;
 import com.ciff.provider.dto.ModelCreateRequest;
 import com.ciff.provider.dto.ModelUpdateRequest;
@@ -9,12 +10,17 @@ import com.ciff.provider.entity.ProviderPO;
 import com.ciff.provider.mapper.ModelMapper;
 import com.ciff.provider.mapper.ProviderMapper;
 import com.ciff.provider.service.impl.ModelServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -28,17 +34,28 @@ class ModelServiceTest {
     @Mock
     private ProviderMapper providerMapper;
 
+    @Mock
+    private CacheManager cacheManager;
+
+    @Mock
+    private ObjectMapper objectMapper;
+
     @InjectMocks
     private ModelServiceImpl modelService;
 
+    private void setupCacheMock() {
+        Cache cache = mock(Cache.class);
+        when(cacheManager.getCache("provider-cache")).thenReturn(cache);
+    }
+
     @Test
     void create_whenProviderExists_shouldSave() {
-        // Given
         ProviderPO provider = new ProviderPO();
         provider.setId(1L);
         provider.setName("OpenAI");
         when(providerMapper.selectById(1L)).thenReturn(provider);
         when(modelMapper.insert(any(ModelPO.class))).thenReturn(1);
+        setupCacheMock();
 
         ModelCreateRequest request = new ModelCreateRequest();
         request.setProviderId(1L);
@@ -67,6 +84,47 @@ class ModelServiceTest {
     }
 
     @Test
+    void create_withValidDefaultParams_shouldSave() throws Exception {
+        ProviderPO provider = new ProviderPO();
+        provider.setId(1L);
+        when(providerMapper.selectById(1L)).thenReturn(provider);
+        when(modelMapper.insert(any(ModelPO.class))).thenReturn(1);
+        setupCacheMock();
+
+        ModelCreateRequest request = new ModelCreateRequest();
+        request.setProviderId(1L);
+        request.setName("gpt-4o");
+        request.setDefaultParams("{\"temperature\":0.7}");
+
+        modelService.create(request);
+
+        verify(modelMapper).insert(any(ModelPO.class));
+    }
+
+    @Test
+    void create_withInvalidDefaultParams_shouldThrow() throws Exception {
+        ProviderPO provider = new ProviderPO();
+        provider.setId(1L);
+        when(providerMapper.selectById(1L)).thenReturn(provider);
+        when(objectMapper.readTree(any(String.class))).thenThrow(
+                new com.fasterxml.jackson.core.JsonParseException("Invalid JSON"));
+
+        ModelCreateRequest request = new ModelCreateRequest();
+        request.setProviderId(1L);
+        request.setName("gpt-4o");
+        request.setDefaultParams("not-json");
+
+        assertThatThrownBy(() -> modelService.create(request))
+                .isInstanceOf(BizException.class)
+                .satisfies(ex -> {
+                    BizException biz = (BizException) ex;
+                    assertThat(biz.getCode()).isEqualTo(ErrorCode.BAD_REQUEST.getCode());
+                });
+
+        verify(modelMapper, never()).insert(any(ModelPO.class));
+    }
+
+    @Test
     void update_whenProviderIdChanged_shouldValidateNewProvider() {
         // Given
         ModelPO existing = new ModelPO();
@@ -80,6 +138,7 @@ class ModelServiceTest {
         newProvider.setName("Claude");
         when(providerMapper.selectById(2L)).thenReturn(newProvider);
         when(modelMapper.updateById(any(ModelPO.class))).thenReturn(1);
+        setupCacheMock();
 
         ModelUpdateRequest request = new ModelUpdateRequest();
         request.setProviderId(2L);
@@ -93,11 +152,32 @@ class ModelServiceTest {
     }
 
     @Test
+    void update_withInvalidDefaultParams_shouldThrow() throws Exception {
+        ModelPO existing = new ModelPO();
+        existing.setId(1L);
+        existing.setProviderId(1L);
+        when(modelMapper.selectById(1L)).thenReturn(existing);
+        when(objectMapper.readTree(any(String.class))).thenThrow(
+                new com.fasterxml.jackson.core.JsonParseException("Invalid JSON"));
+
+        ModelUpdateRequest request = new ModelUpdateRequest();
+        request.setDefaultParams("bad-json");
+
+        assertThatThrownBy(() -> modelService.update(1L, request))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("defaultParams 不是有效的 JSON");
+
+        verify(modelMapper, never()).updateById(any(ModelPO.class));
+    }
+
+    @Test
     void delete_shouldCallDeleteById() {
         ModelPO existing = new ModelPO();
         existing.setId(1L);
+        existing.setProviderId(1L);
         when(modelMapper.selectById(1L)).thenReturn(existing);
         when(modelMapper.deleteById(1L)).thenReturn(1);
+        setupCacheMock();
 
         modelService.delete(1L);
 

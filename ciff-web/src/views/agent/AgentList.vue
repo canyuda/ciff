@@ -27,7 +27,7 @@
 
         <template #actions="{ row }">
           <div style="display: flex; gap: 8px">
-            <el-button link type="primary" @click="dialogRef?.open(row)">编辑</el-button>
+            <el-button link type="primary" @click="openEditDialog(row.id)">编辑</el-button>
             <el-button link type="danger" @click="handleDelete(row.id)">删除</el-button>
           </div>
         </template>
@@ -103,6 +103,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import { notifySuccess } from '@/utils/notify'
 import {
   getAgents,
+  getAgentById,
   createAgent,
   updateAgent,
   deleteAgent,
@@ -174,6 +175,21 @@ async function loadOptions() {
 
 async function fetchAgents(params: PageParams) {
   return getAgents({ page: params.page, pageSize: params.pageSize })
+}
+
+async function openEditDialog(id?: number) {
+  if (!id) return
+  const detail = await getAgentById(id)
+  const formData: AgentForm = {
+    id: detail.id,
+    name: detail.name,
+    description: detail.description,
+    type: detail.type,
+    modelId: detail.modelId,
+    systemPrompt: detail.systemPrompt,
+    toolIds: detail.tools?.map((t) => t.id!).filter(Boolean),
+  }
+  dialogRef.value?.open(formData)
 }
 
 async function handleSubmit(form: AgentForm) {

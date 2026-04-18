@@ -15,7 +15,10 @@ import com.ciff.provider.entity.ProviderPO;
 import com.ciff.provider.mapper.ModelMapper;
 import com.ciff.provider.mapper.ProviderMapper;
 import com.ciff.provider.service.ModelService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,28 +29,40 @@ public class ModelServiceImpl implements ModelService {
 
     private final ModelMapper modelMapper;
     private final ProviderMapper providerMapper;
+    private final CacheManager cacheManager;
+    private final ObjectMapper objectMapper;
 
     @Override
     public ModelVO create(ModelCreateRequest request) {
-        // 校验 providerId 存在
         requireProviderExists(request.getProviderId());
+        validateDefaultParams(request.getDefaultParams());
 
         ModelPO po = ModelConvertor.toPO(request);
         modelMapper.insert(po);
+        evictProviderCache(request.getProviderId());
         return enrichProviderName(ModelConvertor.toVO(po));
     }
 
     @Override
     public ModelVO update(Long id, ModelUpdateRequest request) {
         ModelPO po = requireExists(id);
+        Long oldProviderId = po.getProviderId();
 
-        // 如果变更了 providerId，校验新的 providerId 存在
         if (request.getProviderId() != null && !request.getProviderId().equals(po.getProviderId())) {
             requireProviderExists(request.getProviderId());
+        }
+        if (request.getDefaultParams() != null) {
+            validateDefaultParams(request.getDefaultParams());
         }
 
         ModelConvertor.updatePO(po, request);
         modelMapper.updateById(po);
+
+        evictProviderCache(oldProviderId);
+        if (request.getProviderId() != null && !request.getProviderId().equals(oldProviderId)) {
+            evictProviderCache(request.getProviderId());
+        }
+
         return enrichProviderName(ModelConvertor.toVO(po));
     }
 
@@ -58,8 +73,9 @@ public class ModelServiceImpl implements ModelService {
 
     @Override
     public void delete(Long id) {
-        requireExists(id);
+        ModelPO po = requireExists(id);
         modelMapper.deleteById(id);
+        evictProviderCache(po.getProviderId());
     }
 
     @Override
@@ -115,6 +131,24 @@ public class ModelServiceImpl implements ModelService {
     private void requireProviderExists(Long providerId) {
         if (providerMapper.selectById(providerId) == null) {
             throw new BizException(ErrorCode.BAD_REQUEST, "供应商不存在: " + providerId);
+        }
+    }
+
+    private void validateDefaultParams(String defaultParams) {
+        if (defaultParams == null || defaultParams.isBlank()) {
+            return;
+        }
+        try {
+            objectMapper.readTree(defaultParams);
+        } catch (JsonProcessingException e) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "defaultParams 不是有效的 JSON: " + e.getMessage());
+        }
+    }
+
+    private void evictProviderCache(Long providerId) {
+        var cache = cacheManager.getCache("provider-cache");
+        if (cache != null) {
+            cache.evict(providerId);
         }
     }
 }

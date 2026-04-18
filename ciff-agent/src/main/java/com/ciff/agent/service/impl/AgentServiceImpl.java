@@ -15,6 +15,7 @@ import com.ciff.common.dto.PageResult;
 import com.ciff.common.exception.BizException;
 import com.ciff.common.util.PageHelper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class AgentServiceImpl implements AgentService {
 
     private final AgentMapper agentMapper;
     private final AgentToolService agentToolService;
+    private final AgentDetailCacheHelper detailCacheHelper;
 
     private static final List<String> VALID_TYPES = List.of("chatbot", "agent", "workflow");
     private static final List<String> VALID_STATUSES = List.of("active", "inactive", "draft");
@@ -50,6 +52,7 @@ public class AgentServiceImpl implements AgentService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "agent-cache", key = "#id", beforeInvocation = true)
     public AgentVO update(Long id, AgentUpdateRequest request, Long userId) {
         AgentPO po = requireExists(id, userId);
 
@@ -74,13 +77,16 @@ public class AgentServiceImpl implements AgentService {
 
     @Override
     public AgentVO getById(Long id, Long userId) {
-        AgentPO po = requireExists(id, userId);
-        AgentVO vo = AgentConvertor.toVO(po);
-        vo.setTools(agentToolService.listTools(po.getId()));
+        requireExists(id, userId);
+        AgentVO vo = detailCacheHelper.getDetail(id);
+        if (vo == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "Agent 不存在: " + id);
+        }
         return vo;
     }
 
     @Override
+    @CacheEvict(cacheNames = "agent-cache", key = "#id")
     public void delete(Long id, Long userId) {
         requireExists(id, userId);
         agentMapper.deleteById(id);

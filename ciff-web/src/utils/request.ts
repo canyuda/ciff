@@ -7,6 +7,12 @@ const instance = axios.create({
   timeout: 30000,
 })
 
+instance.interceptors.request.use((config) => {
+  // Temporary: hard-coded user ID until auth module is built
+  config.headers['X-User-Id'] = '1'
+  return config
+})
+
 instance.interceptors.response.use(
   (response: AxiosResponse) => {
     const res = response.data

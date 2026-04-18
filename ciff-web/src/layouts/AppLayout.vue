@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Setting, Document, User, ChatDotRound, Fold, Expand } from '@element-plus/icons-vue'
+import { Setting, Document, Tools, User, ChatDotRound, Fold, Expand } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const collapsed = ref(false)
@@ -60,6 +60,7 @@ const collapsed = ref(false)
 const menuItems = [
   { path: '/provider', label: '供应商管理', icon: Setting },
   { path: '/model', label: '模型管理', icon: Document },
+  { path: '/tool', label: '工具管理', icon: Tools },
   { path: '/agent', label: 'Agent 管理', icon: User },
   { path: '/chat', label: '对话', icon: ChatDotRound },
 ]

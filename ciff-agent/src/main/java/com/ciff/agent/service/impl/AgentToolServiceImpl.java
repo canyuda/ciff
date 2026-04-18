@@ -9,6 +9,7 @@ import com.ciff.common.exception.BizException;
 import com.ciff.mcp.dto.ToolVO;
 import com.ciff.mcp.facade.ToolFacade;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ public class AgentToolServiceImpl implements AgentToolService {
     private final ToolFacade toolFacade;
 
     @Override
+    @CacheEvict(cacheNames = "agent-cache", key = "#agentId")
     public void bind(Long agentId, Long toolId) {
         validateToolExists(toolId);
 
@@ -37,6 +39,7 @@ public class AgentToolServiceImpl implements AgentToolService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "agent-cache", key = "#agentId")
     public void unbind(Long agentId, Long toolId) {
         agentToolMapper.delete(new LambdaQueryWrapper<AgentToolPO>()
                 .eq(AgentToolPO::getAgentId, agentId)
@@ -45,6 +48,7 @@ public class AgentToolServiceImpl implements AgentToolService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "agent-cache", key = "#agentId")
     public void replaceAll(Long agentId, List<Long> toolIds) {
         // validate all tools exist
         if (toolIds != null) {

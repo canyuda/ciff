@@ -8,6 +8,7 @@ import com.ciff.agent.entity.AgentPO;
 import com.ciff.agent.mapper.AgentMapper;
 import com.ciff.agent.service.AgentToolService;
 import com.ciff.agent.service.impl.AgentServiceImpl;
+import com.ciff.agent.service.impl.AgentDetailCacheHelper;
 import com.ciff.common.dto.PageResult;
 import com.ciff.common.exception.BizException;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,9 @@ class AgentServiceTest {
 
     @Mock
     private AgentToolService agentToolService;
+
+    @Mock
+    private AgentDetailCacheHelper detailCacheHelper;
 
     @InjectMocks
     private AgentServiceImpl agentService;
@@ -171,15 +175,21 @@ class AgentServiceTest {
     }
 
     @Test
-    void getById_whenExists_shouldReturnVoWithTools() {
+    void getById_whenExists_shouldReturnCachedDetail() {
         AgentPO po = buildPO(1L, "test-agent", "chatbot", 100L);
         when(agentMapper.selectById(1L)).thenReturn(po);
-        when(agentToolService.listTools(1L)).thenReturn(List.of());
+
+        AgentVO cached = new AgentVO();
+        cached.setId(1L);
+        cached.setName("test-agent");
+        cached.setTools(List.of());
+        when(detailCacheHelper.getDetail(1L)).thenReturn(cached);
 
         AgentVO vo = agentService.getById(1L, 100L);
 
         assertThat(vo.getName()).isEqualTo("test-agent");
         assertThat(vo.getTools()).isNotNull();
+        verify(detailCacheHelper).getDetail(1L);
     }
 
     @Test

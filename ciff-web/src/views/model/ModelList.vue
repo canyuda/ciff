@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <PageHeader title="模型管理" description="配置各供应商下的可用模型及默认参数">
-      <el-button type="primary" @click="dialogRef?.open()">
+      <el-button type="primary" @click="dialogRef?.open({ defaultParamsText: DEFAULT_PARAMS })">
         <el-icon><Plus /></el-icon>新增模型
       </el-button>
     </PageHeader>
@@ -15,7 +15,7 @@
 
         <template #actions="{ row }">
           <div style="display: flex; gap: 8px">
-            <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
+            <el-button link type="primary" @click="openEditDialog(row.id)">编辑</el-button>
             <el-button link type="danger" @click="handleDelete(row.id)">删除</el-button>
           </div>
         </template>
@@ -72,6 +72,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import { notifySuccess } from '@/utils/notify'
 import {
   getModels,
+  getModelById,
   createModel,
   updateModel,
   deleteModel,
@@ -129,18 +130,16 @@ async function loadProviders() {
   }
 }
 
-function openDialog(row?: ModelVO) {
-  if (!row) {
-    dialogRef.value?.open()
-    return
-  }
+async function openEditDialog(id?: number) {
+  if (!id) return
+  const detail = await getModelById(id)
   const form: Partial<ModelForm> = {
-    id: row.id,
-    providerId: row.providerId,
-    name: row.name,
-    displayName: row.displayName,
-    maxTokens: row.maxTokens,
-    defaultParamsText: row.defaultParams ? JSON.stringify(row.defaultParams, null, 2) : '',
+    id: detail.id,
+    providerId: detail.providerId,
+    name: detail.name,
+    displayName: detail.displayName,
+    maxTokens: detail.maxTokens,
+    defaultParamsText: detail.defaultParams ? JSON.stringify(detail.defaultParams, null, 2) : '',
   }
   dialogRef.value?.open(form)
 }
@@ -149,12 +148,24 @@ onMounted(() => {
   loadProviders()
 })
 
+const DEFAULT_PARAMS = '{"temperature":0.7,"topP":1}'
+
+function validateJson(text: string | undefined): void {
+  if (!text || text.trim() === '') return
+  try {
+    JSON.parse(text)
+  } catch {
+    throw new Error('默认参数不是有效的 JSON')
+  }
+}
+
 const rules: FormRules = {
   providerId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
   name: [{ required: true, message: '请输入模型名称', trigger: 'blur' }],
 }
 
 async function handleSubmit(form: ModelForm) {
+  validateJson(form.defaultParamsText)
   const defaultParams = form.defaultParamsText?.trim() || undefined
 
   if (form.id) {

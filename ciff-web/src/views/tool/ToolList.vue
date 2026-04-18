@@ -20,7 +20,7 @@
 
         <template #actions="{ row }">
           <div style="display: flex; gap: 8px">
-            <el-button link type="primary" @click="dialogRef?.open(row)">编辑</el-button>
+            <el-button link type="primary" @click="openEditDialog(row.id)">编辑</el-button>
             <el-button link type="danger" @click="handleDelete(row.id)">删除</el-button>
           </div>
         </template>
@@ -50,6 +50,14 @@
         <el-form-item label="端点地址" prop="endpoint">
           <el-input v-model="data.endpoint" placeholder="API URL 或 MCP Server 地址" />
         </el-form-item>
+        <el-form-item label="参数 Schema" prop="paramSchemaStr">
+          <el-input
+            v-model="data.paramSchemaStr"
+            type="textarea"
+            :rows="6"
+            placeholder='LLM 调用该工具时的参数 JSON Schema，例如：&#10;{&#10;  "type": "object",&#10;  "properties": {&#10;    "city": { "type": "string" }&#10;  },&#10;  "required": ["city"]&#10;}'
+          />
+        </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="data.status" style="width: 100%">
             <el-option label="启用" value="enabled" />
@@ -71,6 +79,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import { notifySuccess } from '@/utils/notify'
 import {
   getTools,
+  getToolById,
   createTool,
   updateTool,
   deleteTool,
@@ -108,11 +117,34 @@ const rules: FormRules = {
   endpoint: [{ required: true, message: '请输入端点地址', trigger: 'blur' }],
 }
 
+function validateParamSchema(schemaStr: string | undefined): Record<string, unknown> | null {
+  if (!schemaStr || schemaStr.trim() === '') return null
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(schemaStr)
+  } catch {
+    throw new Error('参数 Schema 不是有效的 JSON')
+  }
+  if (typeof parsed !== 'object' || parsed === null) {
+    throw new Error('参数 Schema 必须是 JSON 对象')
+  }
+  const obj = parsed as Record<string, unknown>
+  if (obj.type !== 'object') {
+    throw new Error('参数 Schema 必须包含 "type": "object"')
+  }
+  if (typeof obj.properties !== 'object' || obj.properties === null) {
+    throw new Error('参数 Schema 必须包含 properties 对象')
+  }
+  return obj
+}
+
 async function fetchTools(params: PageParams) {
   return getTools({ page: params.page, pageSize: params.pageSize })
 }
 
-async function handleSubmit(form: ToolVO) {
+async function handleSubmit(form: ToolVO & { paramSchemaStr?: string }) {
+  const paramSchema = validateParamSchema(form.paramSchemaStr)
+
   if (form.id) {
     const payload: ToolUpdateRequest = {
       name: form.name,
@@ -120,6 +152,7 @@ async function handleSubmit(form: ToolVO) {
       type: form.type,
       endpoint: form.endpoint,
       status: form.status,
+      paramSchema,
     }
     await updateTool(form.id, payload)
     notifySuccess('更新成功')
@@ -129,11 +162,22 @@ async function handleSubmit(form: ToolVO) {
       description: form.description,
       type: form.type,
       endpoint: form.endpoint,
+      paramSchema,
     }
     await createTool(payload)
     notifySuccess('创建成功')
   }
   tableRef.value?.refresh()
+}
+
+async function openEditDialog(id?: number) {
+  if (!id) return
+  const detail = await getToolById(id)
+  const data = { ...detail } as ToolVO & { paramSchemaStr?: string }
+  if (detail.paramSchema) {
+    data.paramSchemaStr = JSON.stringify(detail.paramSchema, null, 2)
+  }
+  dialogRef.value?.open(data)
 }
 
 const { confirm } = useConfirm()
