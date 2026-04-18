@@ -42,4 +42,20 @@ public class ThreadPoolConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean("docProcessExecutor")
+    @Qualifier("docProcessExecutor")
+    public ThreadPoolTaskExecutor docProcessExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(3);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("doc-process-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(120);
+        executor.setTaskDecorator(new UserContextTaskDecorator());
+        executor.initialize();
+        return executor;
+    }
 }

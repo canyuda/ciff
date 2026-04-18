@@ -58,7 +58,7 @@
 **设计要点**：
 - `KnowledgePO` 继承 `SoftDeletableEntity`
 - `chunk_size` 默认 500，校验范围 128-2048
-- `embedding_model` V1 仅支持兼容 1536 维的模型（如 text-embedding-ada-002），写入时校验
+- `embedding_model` V1 仅支持 text-embedding-v3（阿里云，1024 维），写入时校验
 - Service 接口遵循已有模块的 `create/update/getById/delete/page` 模式
 - Facade 暴露给外部模块（ciff-app / ciff-chat）调用
 
@@ -92,7 +92,7 @@
 **设计要点**：
 - `EmbeddingService`：通过 `ProviderFacade` 获取 Provider 配置，用 `WebClient` 调用 OpenAI 兼容的 `/v1/embeddings` 接口
 - 请求格式：`{"input": ["text1", "text2"], "model": "text-embedding-ada-002"}`
-- 响应解析：提取 `data[].embedding`（float[1536]）
+- 响应解析：提取 `data[].embedding`（float[1024]）
 - `VectorStoreService`：使用 JdbcTemplate
   - `insertChunks(Long documentId, Long knowledgeId, List<ChunkData> chunks)` — 批量写入
   - `search(Long knowledgeId, float[] queryEmbedding, int topK, float minScore)` — 余弦相似度检索

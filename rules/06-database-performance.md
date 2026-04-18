@@ -240,7 +240,7 @@ CREATE TABLE t_{module}_{entity} (
 CREATE TABLE t_knowledge_chunk (
     id              BIGSERIAL PRIMARY KEY,
     -- ... 业务字段 ...
-    embedding       VECTOR(1536) NOT NULL,
+    embedding       VECTOR(1024) NOT NULL,
     create_time      TIMESTAMP DEFAULT NOW()
 );
 

@@ -49,6 +49,8 @@ springdoc:
 ciff:
   security:
     api-key-secret: ${CIFF_API_KEY_SECRET:MZt1MJ5RNA+UEWWsDjk0q0S4ydVVU9Dh}
+  upload:
+    path: ${CIFF_UPLOAD_PATH:./uploads}
   llm:
     timeout:
       first-token: ${LLM_FIRST_TOKEN_TIMEOUT:30s}
