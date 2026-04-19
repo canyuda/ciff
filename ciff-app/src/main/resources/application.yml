@@ -48,7 +48,7 @@ springdoc:
 
 ciff:
   security:
-    api-key-secret: ${CIFF_API_KEY_SECRET:MZt1MJ5RNA+UEWWsDjk0q0S4ydVVU9Dh}
+    api-key-secret: ${CIFF_API_KEY_SECRET:}
   upload:
     path: ${CIFF_UPLOAD_PATH:./uploads}
   llm:
