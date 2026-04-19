@@ -1,6 +1,7 @@
 import { get, post, put, del } from '@/utils/request'
 import type { PageResult } from '@/types/common'
 import type { ToolVO } from './tool'
+import type { KnowledgeVO } from './knowledge'
 
 export interface AgentVO {
   id?: number
@@ -16,6 +17,7 @@ export interface AgentVO {
   fallbackModelName?: string
   status: string
   tools?: ToolVO[]
+  knowledges?: KnowledgeVO[]
   createTime?: string
   updateTime?: string
   [key: string]: unknown
@@ -31,6 +33,7 @@ export interface AgentCreateRequest {
   modelParams?: Record<string, unknown> | null
   fallbackModelId?: number | null
   toolIds?: number[]
+  knowledgeIds?: number[]
 }
 
 export interface AgentUpdateRequest {
@@ -44,6 +47,7 @@ export interface AgentUpdateRequest {
   fallbackModelId?: number | null
   status?: string
   toolIds?: number[]
+  knowledgeIds?: number[]
 }
 
 export function getAgents(params: {
@@ -81,4 +85,16 @@ export function unbindTool(agentId: number, toolId: number) {
 
 export function replaceAgentTools(agentId: number, toolIds: number[]) {
   return put(`/v1/app/agents/${agentId}/tools`, toolIds)
+}
+
+export function bindKnowledge(agentId: number, knowledgeId: number) {
+  return post(`/v1/app/agents/${agentId}/knowledges/${knowledgeId}`)
+}
+
+export function unbindKnowledge(agentId: number, knowledgeId: number) {
+  return del(`/v1/app/agents/${agentId}/knowledges/${knowledgeId}`)
+}
+
+export function replaceAgentKnowledges(agentId: number, knowledgeIds: number[]) {
+  return put(`/v1/app/agents/${agentId}/knowledges`, knowledgeIds)
 }

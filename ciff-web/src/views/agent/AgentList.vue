@@ -25,6 +25,10 @@
           <span>{{ row.tools?.length ?? 0 }}</span>
         </template>
 
+        <template #knowledges="{ row }">
+          <span>{{ row.knowledges?.length ?? 0 }}</span>
+        </template>
+
         <template #actions="{ row }">
           <div style="display: flex; gap: 8px">
             <el-button link type="primary" @click="openEditDialog(row.id)">编辑</el-button>
@@ -88,6 +92,21 @@
             </el-option>
           </el-select>
         </el-form-item>
+        <el-form-item label="绑定知识库" prop="knowledgeIds">
+          <el-select v-model="data.knowledgeIds" multiple placeholder="选择知识库" style="width: 100%">
+            <el-option
+              v-for="k in knowledgeOptions"
+              :key="k.id"
+              :label="k.name"
+              :value="k.id"
+            >
+              <span>{{ k.name }}</span>
+              <el-tag size="small" style="margin-left: 8px" :type="k.status === 'active' ? 'success' : 'info'">
+                {{ k.status === 'active' ? '启用' : '停用' }}
+              </el-tag>
+            </el-option>
+          </el-select>
+        </el-form-item>
       </template>
     </CiffFormDialog>
   </div>
@@ -113,6 +132,7 @@ import {
 } from '@/api/agent'
 import { getModels, type ModelVO } from '@/api/model'
 import { getTools, type ToolVO } from '@/api/tool'
+import { getKnowledgeList, type KnowledgeVO } from '@/api/knowledge'
 import type { TableColumn, PageParams } from '@/types/common'
 import type { FormRules } from 'element-plus'
 
@@ -132,18 +152,21 @@ interface AgentForm {
   modelId?: number
   systemPrompt: string
   toolIds?: number[]
+  knowledgeIds?: number[]
 }
 
 const tableRef = ref<TableRef | null>(null)
 const dialogRef = ref<DialogRef | null>(null)
 const modelOptions = ref<ModelVO[]>([])
 const toolOptions = ref<ToolVO[]>([])
+const knowledgeOptions = ref<KnowledgeVO[]>([])
 
 const columns: TableColumn[] = [
   { label: '名称', prop: 'name', minWidth: 140 },
   { label: '类型', slot: 'type', width: 110, align: 'center' },
   { label: '模型', prop: 'modelName', minWidth: 120 },
   { label: '工具数', slot: 'tools', width: 80, align: 'center' },
+  { label: '知识库', slot: 'knowledges', width: 80, align: 'center' },
   { label: '状态', slot: 'status', width: 80, align: 'center' },
   { label: '创建时间', prop: 'createTime', width: 170 },
   { label: '操作', slot: 'actions', minWidth: 130, fixed: 'right' },
@@ -162,12 +185,14 @@ onMounted(async () => {
 
 async function loadOptions() {
   try {
-    const [modelsRes, toolsRes] = await Promise.all([
+    const [modelsRes, toolsRes, knowledgeRes] = await Promise.all([
       getModels({ page: 1, pageSize: 100 }),
       getTools({ page: 1, pageSize: 100 }),
+      getKnowledgeList({ page: 1, pageSize: 100 }),
     ])
     modelOptions.value = modelsRes.list
     toolOptions.value = toolsRes.list
+    knowledgeOptions.value = knowledgeRes.list
   } catch {
     // options load failure should not block page
   }
@@ -188,6 +213,7 @@ async function openEditDialog(id?: number) {
     modelId: detail.modelId,
     systemPrompt: detail.systemPrompt,
     toolIds: detail.tools?.map((t) => t.id!).filter(Boolean),
+    knowledgeIds: detail.knowledges?.map((k) => k.id!).filter(Boolean),
   }
   dialogRef.value?.open(formData)
 }
@@ -201,6 +227,7 @@ async function handleSubmit(form: AgentForm) {
       modelId: form.modelId,
       systemPrompt: form.systemPrompt,
       toolIds: form.toolIds,
+      knowledgeIds: form.knowledgeIds,
     }
     await updateAgent(form.id, payload)
     notifySuccess('更新成功')
@@ -212,6 +239,7 @@ async function handleSubmit(form: AgentForm) {
       modelId: form.modelId!,
       systemPrompt: form.systemPrompt,
       toolIds: form.toolIds,
+      knowledgeIds: form.knowledgeIds,
     }
     await createAgent(payload)
     notifySuccess('创建成功')

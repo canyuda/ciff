@@ -9,6 +9,7 @@ import com.ciff.agent.dto.AgentVO;
 import com.ciff.agent.entity.AgentPO;
 import com.ciff.agent.mapper.AgentMapper;
 import com.ciff.agent.service.AgentService;
+import com.ciff.agent.service.AgentKnowledgeService;
 import com.ciff.agent.service.AgentToolService;
 import com.ciff.common.constant.ErrorCode;
 import com.ciff.common.dto.PageResult;
@@ -27,6 +28,7 @@ public class AgentServiceImpl implements AgentService {
 
     private final AgentMapper agentMapper;
     private final AgentToolService agentToolService;
+    private final AgentKnowledgeService agentKnowledgeService;
     private final AgentDetailCacheHelper detailCacheHelper;
 
     private static final List<String> VALID_TYPES = List.of("chatbot", "agent", "workflow");
@@ -43,6 +45,10 @@ public class AgentServiceImpl implements AgentService {
 
         if (request.getToolIds() != null && !request.getToolIds().isEmpty()) {
             agentToolService.replaceAll(po.getId(), request.getToolIds());
+        }
+
+        if (request.getKnowledgeIds() != null && !request.getKnowledgeIds().isEmpty()) {
+            agentKnowledgeService.replaceAll(po.getId(), request.getKnowledgeIds());
         }
 
         AgentVO vo = AgentConvertor.toVO(po);
@@ -68,6 +74,10 @@ public class AgentServiceImpl implements AgentService {
 
         if (request.getToolIds() != null) {
             agentToolService.replaceAll(po.getId(), request.getToolIds());
+        }
+
+        if (request.getKnowledgeIds() != null) {
+            agentKnowledgeService.replaceAll(po.getId(), request.getKnowledgeIds());
         }
 
         AgentVO vo = AgentConvertor.toVO(po);

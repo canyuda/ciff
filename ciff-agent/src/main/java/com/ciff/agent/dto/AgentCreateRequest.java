@@ -45,4 +45,7 @@ public class AgentCreateRequest {
 
     @Schema(description = "绑定的工具 ID 列表")
     private List<Long> toolIds;
+
+    @Schema(description = "绑定的知识库 ID 列表")
+    private List<Long> knowledgeIds;
 }

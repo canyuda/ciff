@@ -42,4 +42,7 @@ public class AgentUpdateRequest {
 
     @Schema(description = "替换绑定的工具 ID 列表（全量替换）")
     private List<Long> toolIds;
+
+    @Schema(description = "替换绑定的知识库 ID 列表（全量替换）")
+    private List<Long> knowledgeIds;
 }
