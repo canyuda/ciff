@@ -58,7 +58,7 @@ public class KnowledgeFacadeImpl implements KnowledgeFacade {
                     .flatMap(kid -> knowledgeChunkService.search(queryEmbedding, kid, topN * 2).stream())
                     .toList();
         } else {
-            candidates = knowledgeChunkService.search(queryEmbedding, null, topN * 3);
+            candidates = knowledgeChunkService.search(queryEmbedding, (Long) null, topN * 3);
         }
 
         if (candidates.isEmpty()) {

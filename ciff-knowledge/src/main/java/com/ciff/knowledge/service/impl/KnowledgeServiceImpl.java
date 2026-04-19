@@ -10,7 +10,9 @@ import com.ciff.knowledge.convertor.KnowledgeConvertor;
 import com.ciff.knowledge.dto.KnowledgeCreateRequest;
 import com.ciff.knowledge.dto.KnowledgeUpdateRequest;
 import com.ciff.knowledge.dto.KnowledgeVO;
+import com.ciff.knowledge.entity.DocumentPO;
 import com.ciff.knowledge.entity.KnowledgePO;
+import com.ciff.knowledge.mapper.DocumentMapper;
 import com.ciff.knowledge.mapper.KnowledgeMapper;
 import com.ciff.knowledge.service.KnowledgeService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import java.util.List;
 public class KnowledgeServiceImpl implements KnowledgeService {
 
     private final KnowledgeMapper knowledgeMapper;
+    private final DocumentMapper documentMapper;
 
     private static final int MIN_CHUNK_SIZE = 128;
     private static final int MAX_CHUNK_SIZE = 2048;
@@ -89,6 +92,12 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         List<KnowledgeVO> records = result.getRecords().stream()
                 .map(KnowledgeConvertor::toVO)
                 .toList();
+        records.forEach(vo -> {
+            long count = documentMapper.selectCount(
+                    new LambdaQueryWrapper<DocumentPO>()
+                            .eq(DocumentPO::getKnowledgeId, vo.getId()));
+            vo.setDocumentCount((int) count);
+        });
         return PageResult.of(records, result.getTotal(),
                 (int) result.getCurrent(), (int) result.getSize());
     }

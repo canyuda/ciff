@@ -28,6 +28,16 @@ const router = createRouter({
       component: () => import('@/views/knowledge/KnowledgeList.vue'),
     },
     {
+      path: '/knowledge-documents',
+      name: 'knowledge-documents',
+      component: () => import('@/views/knowledge/KnowledgeDocManage.vue'),
+    },
+    {
+      path: '/recall-test',
+      name: 'recall-test',
+      component: () => import('@/views/knowledge/RecallTest.vue'),
+    },
+    {
       path: '/agent',
       name: 'agent',
       component: () => import('@/views/agent/AgentList.vue'),

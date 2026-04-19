@@ -1,8 +1,11 @@
 package com.ciff.knowledge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.ciff.common.constant.ErrorCode;
+import com.ciff.common.dto.PageResult;
 import com.ciff.common.exception.BizException;
+import com.ciff.common.util.PageHelper;
 import com.ciff.knowledge.dto.DocumentVO;
 import com.ciff.knowledge.entity.DocumentPO;
 import com.ciff.knowledge.entity.KnowledgePO;
@@ -16,7 +19,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -68,19 +75,21 @@ public class DocumentServiceImpl implements DocumentService {
         // Trigger async processing
         documentProcessingService.process(doc.getId());
 
-        return toVO(doc);
+        KnowledgePO knowledge = knowledgeMapper.selectById(knowledgeId);
+        return toVO(doc, knowledge != null ? knowledge.getName() : null);
     }
 
     @Override
     public List<DocumentVO> listByKnowledgeId(Long knowledgeId, Long userId) {
         requireKnowledgeExists(knowledgeId, userId);
+        KnowledgePO knowledge = knowledgeMapper.selectById(knowledgeId);
 
         LambdaQueryWrapper<DocumentPO> wrapper = new LambdaQueryWrapper<DocumentPO>()
                 .eq(DocumentPO::getKnowledgeId, knowledgeId)
                 .orderByDesc(DocumentPO::getCreateTime);
 
         return documentMapper.selectList(wrapper).stream()
-                .map(this::toVO)
+                .map(doc -> toVO(doc, knowledge != null ? knowledge.getName() : null))
                 .toList();
     }
 
@@ -98,6 +107,71 @@ public class DocumentServiceImpl implements DocumentService {
         }
 
         documentMapper.deleteById(documentId);
+    }
+
+    @Override
+    public DocumentVO updateFileName(Long documentId, String fileName, Long userId) {
+        if (fileName == null || fileName.isBlank()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "文件名不能为空");
+        }
+
+        DocumentPO doc = documentMapper.selectById(documentId);
+        if (doc == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "文档不存在: " + documentId);
+        }
+
+        requireKnowledgeExists(doc.getKnowledgeId(), userId);
+
+        doc.setFileName(fileName);
+        documentMapper.updateById(doc);
+
+        KnowledgePO knowledge = knowledgeMapper.selectById(doc.getKnowledgeId());
+        return toVO(doc, knowledge != null ? knowledge.getName() : null);
+    }
+
+    @Override
+    public PageResult<DocumentVO> pageAll(Integer page, Integer pageSize, Long knowledgeId, String fileName, Long userId) {
+        // Get knowledge IDs that the user has access to
+        List<Long> allowedKnowledgeIds = knowledgeMapper.selectList(
+                        new LambdaQueryWrapper<KnowledgePO>()
+                                .eq(userId != null, KnowledgePO::getUserId, userId))
+                .stream().map(KnowledgePO::getId).toList();
+
+        if (allowedKnowledgeIds.isEmpty()) {
+            return PageResult.of(Collections.emptyList(), 0, page != null ? page : 1, pageSize != null ? pageSize : 10);
+        }
+
+        List<Long> targetKnowledgeIds;
+        if (knowledgeId != null) {
+            if (!allowedKnowledgeIds.contains(knowledgeId)) {
+                return PageResult.of(Collections.emptyList(), 0, page != null ? page : 1, pageSize != null ? pageSize : 10);
+            }
+            targetKnowledgeIds = List.of(knowledgeId);
+        } else {
+            targetKnowledgeIds = allowedKnowledgeIds;
+        }
+
+        Page<DocumentPO> pageParam = PageHelper.toPage(page, pageSize);
+        LambdaQueryWrapper<DocumentPO> wrapper = new LambdaQueryWrapper<DocumentPO>()
+                .in(DocumentPO::getKnowledgeId, targetKnowledgeIds);
+        if (fileName != null && !fileName.isBlank()) {
+            wrapper.like(DocumentPO::getFileName, fileName);
+        }
+        wrapper.orderByDesc(DocumentPO::getCreateTime);
+
+        Page<DocumentPO> result = documentMapper.selectPage(pageParam, wrapper);
+
+        // Batch query knowledge names
+        Set<Long> docKnowledgeIds = result.getRecords().stream()
+                .map(DocumentPO::getKnowledgeId)
+                .collect(Collectors.toSet());
+        Map<Long, String> knowledgeNameMap = knowledgeMapper.selectBatchIds(docKnowledgeIds).stream()
+                .collect(Collectors.toMap(KnowledgePO::getId, KnowledgePO::getName, (a, b) -> a));
+
+        List<DocumentVO> records = result.getRecords().stream()
+                .map(doc -> toVO(doc, knowledgeNameMap.get(doc.getKnowledgeId())))
+                .toList();
+        return PageResult.of(records, result.getTotal(), (int) result.getCurrent(), (int) result.getSize());
     }
 
     private void validateFile(MultipartFile file) {
@@ -128,9 +202,14 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private DocumentVO toVO(DocumentPO po) {
+        return toVO(po, null);
+    }
+
+    private DocumentVO toVO(DocumentPO po, String knowledgeName) {
         DocumentVO vo = new DocumentVO();
         vo.setId(po.getId());
         vo.setKnowledgeId(po.getKnowledgeId());
+        vo.setKnowledgeName(knowledgeName);
         vo.setFileName(po.getFileName());
         vo.setFileSize(po.getFileSize());
         vo.setChunkCount(po.getChunkCount());

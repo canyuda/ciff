@@ -40,6 +40,43 @@ ciff/
 └── rules/            # 编码规范与设计文档
 ```
 
+## 产品展示
+
+<table>
+  <tr>
+    <td align="center"><b>供应商管理</b></td>
+    <td align="center"><b>模型管理</b></td>
+  </tr>
+  <tr>
+    <td><img src="image/provider.png" alt="供应商管理" width="100%"></td>
+    <td><img src="image/model.png" alt="模型管理" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>工具管理</b></td>
+    <td align="center"><b>Agent 管理</b></td>
+  </tr>
+  <tr>
+    <td><img src="image/tool.png" alt="工具管理" width="100%"></td>
+    <td><img src="image/agent.png" alt="Agent 管理" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>知识库管理</b></td>
+    <td align="center"><b>文档管理</b></td>
+  </tr>
+  <tr>
+    <td><img src="image/knowledge.png" alt="知识库管理" width="100%"></td>
+    <td><img src="image/knowledge-documents.png" alt="文档管理" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>召回测试</b></td>
+    <td align="center"><b>对话页面</b></td>
+  </tr>
+  <tr>
+    <td><img src="image/recall-test.png" alt="召回测试" width="100%"></td>
+    <td><img src="image/chat.png" alt="对话页面" width="100%"></td>
+  </tr>
+</table>
+
 ## 开发进度
 
 ### Phase 1: 基础框架搭建 (2026-04-13 ~ 2026-04-15)

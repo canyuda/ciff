@@ -15,6 +15,9 @@ public class DocumentVO {
     @Schema(description = "知识库 ID")
     private Long knowledgeId;
 
+    @Schema(description = "知识库名称")
+    private String knowledgeName;
+
     @Schema(description = "原始文件名")
     private String fileName;
 

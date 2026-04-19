@@ -20,6 +20,26 @@ export interface KnowledgeCreateRequest {
   embeddingModel: string
 }
 
+export interface SearchResultVO {
+  content?: string
+  embedModel?: string
+  knowledgeName?: string
+  documentName?: string
+  chunkIndex?: number
+  similarity?: number
+  relevanceScore?: number | null
+}
+
+export function searchKnowledge(params: {
+  query: string
+  knowledgeIds: number[]
+  enableRerank?: boolean
+  confidence?: number
+  limit?: number
+}) {
+  return get<SearchResultVO[]>('/v1/app/knowledge/search', params)
+}
+
 export interface KnowledgeUpdateRequest {
   name?: string
   description?: string
@@ -31,12 +51,22 @@ export interface KnowledgeUpdateRequest {
 export interface DocumentVO {
   id?: number
   knowledgeId?: number
+  knowledgeName?: string
   fileName?: string
   fileSize?: number
   chunkCount?: number
   status?: string
   createTime?: string
   updateTime?: string
+}
+
+export interface ChunkVO {
+  id?: number
+  documentId?: number
+  knowledgeId?: number
+  content?: string
+  chunkIndex?: number
+  createTime?: string
 }
 
 export function getKnowledgeList(params: {
@@ -75,12 +105,29 @@ export function listDocuments(knowledgeId: number) {
   return get<DocumentVO[]>(`/v1/app/knowledge/${knowledgeId}/documents`)
 }
 
+export function getAllDocuments(params: {
+  page: number
+  pageSize: number
+  knowledgeId?: number
+  fileName?: string
+}) {
+  return get<PageResult<DocumentVO>>('/v1/app/knowledge/documents', params)
+}
+
 export function deleteDocument(documentId: number) {
   return del(`/v1/app/knowledge/documents/${documentId}`)
 }
 
+export function updateDocument(documentId: number, fileName: string) {
+  return put<DocumentVO>(`/v1/app/knowledge/documents/${documentId}`, null, { params: { fileName } })
+}
+
 export function processDocument(documentId: number) {
   return post(`/v1/app/knowledge/documents/${documentId}/process`)
+}
+
+export function getChunksByDocumentId(documentId: number) {
+  return get<ChunkVO[]>(`/v1/knowledge-chunks`, { documentId })
 }
 
 export function rebuildVectors(

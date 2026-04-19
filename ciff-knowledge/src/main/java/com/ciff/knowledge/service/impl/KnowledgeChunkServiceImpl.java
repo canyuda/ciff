@@ -14,6 +14,7 @@ import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -123,6 +124,20 @@ public class KnowledgeChunkServiceImpl implements KnowledgeChunkService {
                         "FROM t_knowledge_chunk " +
                         "ORDER BY embedding <=> ?::vector LIMIT ?",
                 SEARCH_ROW_MAPPER, vectorStr, vectorStr, limit);
+    }
+
+    @Override
+    public List<KnowledgeChunkPO> search(float[] embedding, List<Long> knowledgeIds, int limit) {
+        if (knowledgeIds == null || knowledgeIds.isEmpty()) {
+            return List.of();
+        }
+        String vectorStr = toVectorString(embedding);
+        String inClause = knowledgeIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+        String sql = "SELECT id, document_id, knowledge_id, content, chunk_index, create_time, " +
+                "1 - (embedding <=> ?::vector) AS similarity " +
+                "FROM t_knowledge_chunk WHERE knowledge_id IN (" + inClause + ") " +
+                "ORDER BY embedding <=> ?::vector LIMIT ?";
+        return jdbcTemplate.query(sql, SEARCH_ROW_MAPPER, vectorStr, vectorStr, limit);
     }
 
     // ---- vector helpers ----

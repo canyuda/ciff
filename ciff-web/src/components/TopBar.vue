@@ -21,13 +21,27 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const breadcrumbMap: Record<string, string> = {
-  '/provider': '模型管理',
+  '/provider': '供应商管理',
+  '/model': '模型管理',
+  '/tool': '工具管理',
   '/knowledge': '知识库管理',
+  '/knowledge-documents': '文档管理',
+  '/recall-test': '召回测试',
   '/agent': 'Agent 管理',
   '/chat': '对话',
 }
 
-const currentLabel = computed(() => breadcrumbMap[route.path] ?? '')
+const currentLabel = computed(() => {
+  if (breadcrumbMap[route.path]) {
+    return breadcrumbMap[route.path]
+  }
+  for (const [path, label] of Object.entries(breadcrumbMap)) {
+    if (route.path.startsWith(path + '/')) {
+      return label
+    }
+  }
+  return ''
+})
 </script>
 
 <style scoped>

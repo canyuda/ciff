@@ -29,4 +29,14 @@ public interface KnowledgeChunkService {
      * @return chunks ordered by similarity (desc)
      */
     List<KnowledgeChunkPO> search(float[] embedding, Long knowledgeId, int limit);
+
+    /**
+     * Vector similarity search across multiple knowledge bases.
+     *
+     * @param embedding     query vector
+     * @param knowledgeIds  filter by knowledge base IDs (must not be empty)
+     * @param limit         max results
+     * @return chunks ordered by similarity (desc)
+     */
+    List<KnowledgeChunkPO> search(float[] embedding, List<Long> knowledgeIds, int limit);
 }

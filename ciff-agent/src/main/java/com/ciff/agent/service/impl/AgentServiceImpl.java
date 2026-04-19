@@ -114,6 +114,10 @@ public class AgentServiceImpl implements AgentService {
 
         Page<AgentPO> result = agentMapper.selectPage(pageParam, wrapper);
         List<AgentVO> records = result.getRecords().stream().map(AgentConvertor::toVO).toList();
+        records.forEach(vo -> {
+            vo.setTools(agentToolService.listTools(vo.getId()));
+            vo.setKnowledges(agentKnowledgeService.listKnowledges(vo.getId()));
+        });
         return PageResult.of(records, result.getTotal(), (int) result.getCurrent(), (int) result.getSize());
     }
 
