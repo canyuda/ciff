@@ -1,5 +1,6 @@
 package com.ciff.agent.dto;
 
+import com.ciff.knowledge.dto.KnowledgeVO;
 import com.ciff.mcp.dto.ToolVO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -50,6 +51,9 @@ public class AgentVO {
 
     @Schema(description = "绑定的工具列表")
     private List<ToolVO> tools;
+
+    @Schema(description = "绑定的知识库列表")
+    private List<KnowledgeVO> knowledges;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;

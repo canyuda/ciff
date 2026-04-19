@@ -26,7 +26,7 @@ public class KnowledgeServiceImpl implements KnowledgeService {
 
     private static final int MIN_CHUNK_SIZE = 128;
     private static final int MAX_CHUNK_SIZE = 2048;
-    private static final int DEFAULT_CHUNK_SIZE = 500;
+    private static final int DEFAULT_CHUNK_SIZE = 700;
     private static final List<String> VALID_STATUSES = List.of("active", "inactive");
     private static final List<String> VALID_EMBEDDING_MODELS = List.of("text-embedding-v3");
 

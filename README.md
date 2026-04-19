@@ -42,7 +42,7 @@ ciff/
 
 ## 开发进度
 
-### 基础框架搭建 (2026-04-13)
+### Phase 1: 基础框架搭建 (2026-04-13 ~ 2026-04-15)
 
 - [x] Maven 多模块工程骨架（8 子模块，分层依赖）
 - [x] 统一响应 `Result<T>` / 分页 `PageResult<T>`
@@ -52,17 +52,44 @@ ciff/
 - [x] Spring Boot 启动类 + application.yml
 - [x] 项目规范文档（模块结构、数据库、接口、编码、测试）
 - [x] 健康检查接口 `GET /api/v1/health`
+- [x] Flyway 数据库迁移管理
+- [x] 请求日志拦截 + LLM 日志脱敏
 
-### 进行中
+### Phase 2: Provider 模型供应商 (2026-04-15 ~ 2026-04-17)
 
-- [ ] Provider 模块：模型供应商 CRUD + LLM 调用封装
+- [x] 供应商 CRUD（支持 OpenAI / Claude / 本地模型）
+- [x] 模型管理 CRUD + 默认参数配置
+- [x] LLM HTTP 客户端（WebClient + Reactor Netty，同步 + SSE 流式）
+- [x] Claude 客户端适配 + LLM 客户端工厂抽象
+- [x] 供应商健康检查定时任务
+- [x] Resilience4j 熔断保护
+- [x] LLM 调用超时配置（四级超时策略）
+- [x] API Key 加密存储
+
+### Phase 3: Agent / MCP / Knowledge 模块 (2026-04-17 ~ 2026-04-19)
+
+- [x] MCP 工具管理 CRUD + Facade 层
+- [x] Agent 管理 CRUD + Agent-Tool 绑定关系
+- [x] Agent 聚合控制器（模型校验、统一入口）
+- [x] 知识库 CRUD + PGVector 双数据源配置
+- [x] 文档管理（上传、分块、向量化、定时处理调度）
+- [x] 本地文件存储 + TXT 固定长度分块
+- [x] 缓存层支持（Provider / Agent 详情缓存）
+
+### Phase 4: 前端界面 (2026-04-17 ~ 进行中)
+
+- [x] 前端工程初始化（Vue 3 + TypeScript + Element Plus + Vite）
+- [x] 设计系统与公共组件库（CiffTable / CiffFormDialog / PageHeader / TopBar）
+- [x] 供应商管理页面
+- [x] 模型管理页面
+- [x] 工具管理页面
+- [x] Agent 管理页面
+- [ ] Chat 对话页面（基础框架已有）
 
 ### 待开发
 
-- [ ] MCP 工具管理
-- [ ] 知识库 + RAG
-- [ ] Agent 管理 + 工具编排
-- [ ] Workflow 引擎
-- [ ] Chat 对话引擎
-- [ ] 前端界面
-- [ ] Docker 部署
+- [ ] Workflow 引擎（JSON 配置，线性步骤 + 条件分支）
+- [ ] Chat 对话引擎（顶层编排，串联 Agent / 知识库 / 工具）
+- [ ] 知识库 RAG 检索集成（向量查询接入对话链路）
+- [ ] Docker Compose 部署
+- [ ] Nginx 反向代理 + SSE 透传配置

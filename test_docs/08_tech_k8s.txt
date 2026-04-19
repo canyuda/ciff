@@ -1,0 +1,285 @@
+Kubernetes 集群运维手册
+
+版本：v2.1 | 更新日期：2024-06-15
+
+第一章 集群健康检查
+
+1.1 日常巡检清单
+
+运维人员每日需完成以下巡检项目：
+
+集群节点状态
+执行命令：kubectl get nodes
+检查要点：所有节点应为Ready状态，若无则为NotReady，需进一步排查
+
+Pod运行状态
+执行命令：kubectl get pods -A | grep -v Running
+检查要点：应无非Running状态的Pod（Completed状态的Job除外）
+
+组件健康状态
+执行命令：kubectl get componentstatuses
+检查要点：scheduler、controller-manager、etcd均应为Healthy
+
+资源使用率
+执行命令：kubectl top nodes
+检查要点：CPU使用率不应持续超过80%，内存使用率不应超过85%
+
+磁盘使用
+在每个节点执行：df -h
+检查要点：根分区使用率不超过80%，Docker数据目录不超过75%
+
+证书有效期
+执行命令：kubeadm certs check-expiration
+检查要点：所有证书到期时间应大于30天
+
+1.2 常见故障排查流程
+
+Pod处于Pending状态
+- 检查是否有足够的资源：kubectl describe pod <pod-name>
+- 检查是否有匹配的节点：节点标签、污点、亲和性规则
+- 检查PVC是否能被绑定：kubectl get pvc
+
+Pod处于CrashLoopBackOff状态
+- 查看容器日志：kubectl logs <pod-name> --previous
+- 检查健康检查配置：livenessProbe/readinessProbe参数是否合理
+- 检查应用启动时间：是否需要增加initialDelaySeconds
+
+Pod处于ImagePullBackOff状态
+- 检查镜像名称和标签是否正确
+- 检查镜像仓库凭据：kubectl get secrets
+- 检查网络连接：节点是否能访问镜像仓库
+
+第二章 资源管理
+
+2.1 ResourceQuota 配置
+
+为每个命名空间配置资源配额，防止单个团队占用过多资源：
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: team-quota
+  namespace: team-alpha
+spec:
+  hard:
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    limits.cpu: "40"
+    limits.memory: 80Gi
+    pods: "50"
+    services: "10"
+
+2.2 LimitRange 配置
+
+设置默认资源限制，确保每个Pod都有合理的资源配置：
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-limits
+  namespace: team-alpha
+spec:
+  limits:
+  - default:
+      cpu: "1"
+      memory: 1Gi
+    defaultRequest:
+      cpu: 100m
+      memory: 128Mi
+    max:
+      cpu: "4"
+      memory: 8Gi
+    type: Container
+
+2.3 Horizontal Pod Autoscaler
+
+HPA配置建议：
+
+- 最小副本数：至少2个（保证高可用）
+- 最大副本数：根据业务峰值设置，不超过集群容量的50%
+- CPU阈值：70%-80%触发扩容
+- 内存阈值：80%触发扩容
+- 扩容冷却时间：至少60秒
+- 缩容冷却时间：至少300秒
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-server-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-server
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 75
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+
+第三章 网络管理
+
+3.1 Service 类型选择
+
+ClusterIP：集群内部通信，最常用的类型
+NodePort：对外暴露服务，端口范围30000-32767
+LoadBalancer：云环境推荐使用，自动配置外部负载均衡器
+ExternalName：将服务映射到外部DNS名称
+
+3.2 Ingress 配置
+
+推荐使用Nginx Ingress Controller，配置模板如下：
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.example.com
+    secretName: api-tls
+  rules:
+  - host: api.example.com
+    http:
+      paths:
+      - path: /v1
+        pathType: Prefix
+        backend:
+          service:
+            name: api-server
+            port:
+              number: 8080
+
+3.3 Network Policy
+
+在生产环境中应默认拒绝所有入站流量，仅允许明确的通信路径：
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+第四章 存储管理
+
+4.1 StorageClass 配置
+
+根据存储类型配置不同的StorageClass：
+
+- SSD（高性能）：用于数据库等IO密集型应用
+- HDD（标准）：用于日志、备份等非关键数据
+- NFS（共享）：用于需要多Pod同时访问的数据
+
+4.2 PVC 扩容
+
+Kubernetes支持在线扩容PVC（需StorageClass允许）：
+
+kubectl patch pvc data-pvc -p '{"spec":{"resources":{"requests":{"storage":"100Gi"}}}}'
+
+注意事项：
+- 仅支持扩容，不支持缩容
+- 某些存储类型需要Pod重启才能生效
+- 扩容前确认后端存储有足够空间
+
+第五章 备份与恢复
+
+5.1 etcd 备份
+
+etcd是Kubernetes的数据库，定期备份至关重要：
+
+备份命令：
+ETCDCTL_API=3 etcdctl snapshot save /backup/etcd-snapshot-$(date +%Y%m%d).db \
+  --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key
+
+恢复命令：
+ETCDCTL_API=3 etcdctl snapshot restore /backup/etcd-snapshot-20240615.db \
+  --data-dir=/var/lib/etcd-restore
+
+建议备份策略：
+- 每日增量备份
+- 每周全量备份
+- 备份文件保留30天
+- 异地保存至少一份
+
+5.2 应用数据备份
+
+对于有状态应用（数据库、消息队列等），需要配置应用级别的备份策略：
+
+MySQL：使用mysqldump或XtraBackup，每日全量+binlog增量
+MongoDB：使用mongodump，每日全量+oplog增量
+Redis：配置RDB+AOF持久化，定期备份RDB文件
+Kafka：配置多副本（replication-factor >= 3），定期备份Topic配置
+
+第六章 安全
+
+6.1 RBAC 配置
+
+遵循最小权限原则，为不同角色配置精细的权限：
+
+- 集群管理员：cluster-admin角色
+- 开发人员：命名空间内的edit角色
+- 只读用户：命名空间内的view角色
+- CI/CD服务账户：仅授予部署和日志查看权限
+
+6.2 Pod安全标准
+
+Kubernetes 1.25+使用Pod Security Standards替代了PodSecurityPolicy：
+
+- Privileged：不限制，仅用于系统和基础设施组件
+- Baseline：最小限制，阻止已知的提权方式
+- Restricted：严格限制，推荐所有应用使用
+
+6.3 Secret管理
+
+- 禁止将Secret明文存储在Git仓库中
+- 使用External Secrets Operator对接Vault或云厂商密钥管理服务
+- 为Secret配置自动轮转策略
+- 启用etcd加密存储：--encryption-provider-config
+
+第七章 监控告警
+
+7.1 Prometheus规则
+
+关键告警规则：
+
+节点NotReady超过5分钟
+Pod重启次数超过5次/10分钟
+PVC使用率超过85%
+CPU使用率持续超过90%超过5分钟
+内存使用率持续超过90%超过5分钟
+API Server请求延迟P99超过1秒
+etcd磁盘写入延迟超过100ms
+
+7.2 Grafana仪表盘
+
+推荐的仪表盘配置：
+
+- 集群总览：节点数、Pod数、资源使用率
+- 命名空间视图：各团队资源消耗对比
+- 应用监控：请求量、延迟、错误率
+- 基础设施：节点负载、磁盘IO、网络流量
+
+---
+
+本文档由基础架构团队维护，如有问题请联系 #platform-support Slack频道。

@@ -3,6 +3,7 @@ package com.ciff.app.controller;
 import com.ciff.agent.dto.AgentCreateRequest;
 import com.ciff.agent.dto.AgentUpdateRequest;
 import com.ciff.agent.dto.AgentVO;
+import com.ciff.agent.service.AgentKnowledgeService;
 import com.ciff.agent.service.AgentService;
 import com.ciff.agent.service.AgentToolService;
 import com.ciff.common.constant.ErrorCode;
@@ -35,6 +36,7 @@ public class AppAgentController {
 
     private final AgentService agentService;
     private final AgentToolService agentToolService;
+    private final AgentKnowledgeService agentKnowledgeService;
     private final ProviderFacade providerFacade;
 
     @PostMapping
@@ -68,11 +70,12 @@ public class AppAgentController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "查询 Agent 详情（含模型名称）")
+    @Operation(summary = "查询 Agent 详情（含模型名称、知识库列表）")
     public Result<AgentVO> getById(
             @Parameter(description = "Agent ID") @PathVariable Long id) {
         AgentVO vo = agentService.getById(id, UserContext.getUserId());
         enrichModelNames(vo);
+        enrichKnowledges(vo);
         return Result.ok(vo);
     }
 
@@ -123,6 +126,33 @@ public class AppAgentController {
         return Result.ok();
     }
 
+    @PostMapping("/{id}/knowledges/{knowledgeId}")
+    @Operation(summary = "绑定知识库到 Agent")
+    public Result<Void> bindKnowledge(
+            @Parameter(description = "Agent ID") @PathVariable Long id,
+            @Parameter(description = "知识库 ID") @PathVariable Long knowledgeId) {
+        agentKnowledgeService.bind(id, knowledgeId);
+        return Result.ok();
+    }
+
+    @DeleteMapping("/{id}/knowledges/{knowledgeId}")
+    @Operation(summary = "解绑知识库")
+    public Result<Void> unbindKnowledge(
+            @Parameter(description = "Agent ID") @PathVariable Long id,
+            @Parameter(description = "知识库 ID") @PathVariable Long knowledgeId) {
+        agentKnowledgeService.unbind(id, knowledgeId);
+        return Result.ok();
+    }
+
+    @PutMapping("/{id}/knowledges")
+    @Operation(summary = "全量替换 Agent 绑定的知识库")
+    public Result<Void> replaceKnowledges(
+            @Parameter(description = "Agent ID") @PathVariable Long id,
+            @RequestBody java.util.List<Long> knowledgeIds) {
+        agentKnowledgeService.replaceAll(id, knowledgeIds);
+        return Result.ok();
+    }
+
     private void validateModelExists(Long modelId) {
         ModelVO model = providerFacade.getModelById(modelId);
         if (model == null) {
@@ -142,5 +172,12 @@ public class AppAgentController {
             ModelVO model = providerFacade.getModelById(vo.getFallbackModelId());
             vo.setFallbackModelName(model != null ? model.getName() : null);
         }
+    }
+
+    private void enrichKnowledges(AgentVO vo) {
+        if (vo == null) {
+            return;
+        }
+        vo.setKnowledges(agentKnowledgeService.listKnowledges(vo.getId()));
     }
 }

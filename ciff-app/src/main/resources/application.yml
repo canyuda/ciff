@@ -61,6 +61,21 @@ ciff:
       failure-rate-threshold: 50
       wait-duration-in-open-state: 30s
       permitted-number-of-calls-in-half-open-state: 3
+  chunk:
+    size: ${CHUNK_SIZE:700}
+    overlap: ${CHUNK_OVERLAP:70}
+  embedding:
+    base-url: ${EMBEDDING_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
+    api-key: ${EMBEDDING_API_KEY:REDACTED}
+    model: ${EMBEDDING_MODEL:text-embedding-v3}
+    batch-size: ${EMBEDDING_BATCH_SIZE:10}
+  rerank:
+    endpoint: ${RERANK_ENDPOINT:https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank}
+    api-key: ${RERANK_API_KEY:REDACTED}
+    model: ${RERANK_MODEL:gte-rerank-v2}
+    timeout-ms: ${RERANK_TIMEOUT_MS:800}
+    top-n: ${RERANK_TOP_N:5}
+    score-threshold: ${RERANK_SCORE_THRESHOLD:0.3}
   pgvector:
     url: jdbc:postgresql://${PGVECTOR_HOST:localhost}:${PGVECTOR_PORT:5432}/${PGVECTOR_DB:ciff}
     username: ${PGVECTOR_USER:postgres}
