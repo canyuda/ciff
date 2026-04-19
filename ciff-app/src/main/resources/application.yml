@@ -66,12 +66,12 @@ ciff:
     overlap: ${CHUNK_OVERLAP:70}
   embedding:
     base-url: ${EMBEDDING_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
-    api-key: ${EMBEDDING_API_KEY:REDACTED}
+    api-key: ${EMBEDDING_API_KEY:}
     model: ${EMBEDDING_MODEL:text-embedding-v3}
     batch-size: ${EMBEDDING_BATCH_SIZE:10}
   rerank:
     endpoint: ${RERANK_ENDPOINT:https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank}
-    api-key: ${RERANK_API_KEY:REDACTED}
+    api-key: ${RERANK_API_KEY:}
     model: ${RERANK_MODEL:gte-rerank-v2}
     timeout-ms: ${RERANK_TIMEOUT_MS:800}
     top-n: ${RERANK_TOP_N:5}
