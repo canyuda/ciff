@@ -7,10 +7,7 @@ import com.ciff.common.util.ApiKeyEncryptor;
 import com.ciff.provider.dto.ProviderAuthConfig;
 import com.ciff.provider.entity.ProviderPO;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 
 import java.util.HashMap;
@@ -98,7 +95,7 @@ public class OpenAiCompatibleClient implements LlmChatClient {
         if (provider.getType() == ProviderType.OLLAMA) {
             url = baseUrl + "/api/tags";
         } else {
-            url = baseUrl + "/models";
+            url = baseUrl + "/v1/models";
         }
         return appendUrlAuth(url);
     }
@@ -114,26 +111,15 @@ public class OpenAiCompatibleClient implements LlmChatClient {
     }
 
     private String buildRequestBody(LlmChatRequest request, boolean stream) {
-        ObjectNode root = objectMapper.createObjectNode();
-        root.put("model", request.getModelName());
-        root.put("stream", stream);
-
-        if (request.getTemperature() != null) {
-            root.put("temperature", request.getTemperature());
-        }
-        if (request.getMaxTokens() != null) {
-            root.put("max_tokens", request.getMaxTokens());
-        }
-
-        ArrayNode messagesNode = root.putArray("messages");
-        for (LlmChatRequest.Message msg : request.getMessages()) {
-            ObjectNode msgNode = messagesNode.addObject();
-            msgNode.put("role", msg.getRole());
-            msgNode.put("content", msg.getContent());
-        }
-
+        OpenAiCompatibleRequest body = OpenAiCompatibleRequest.builder()
+                .model(request.getModelName())
+                .stream(stream)
+                .temperature(request.getTemperature())
+                .maxTokens(request.getMaxTokens())
+                .messages(request.getMessages())
+                .build();
         try {
-            return objectMapper.writeValueAsString(root);
+            return objectMapper.writeValueAsString(body);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize request body", e);
         }
@@ -141,25 +127,25 @@ public class OpenAiCompatibleClient implements LlmChatClient {
 
     private LlmChatResponse parseResponse(String responseBody) {
         try {
-            JsonNode root = objectMapper.readTree(responseBody);
+            OpenAiCompletionResponse resp = objectMapper.readValue(responseBody, OpenAiCompletionResponse.class);
 
             LlmChatResponse.Usage usage = null;
-            if (root.has("usage") && !root.get("usage").isNull()) {
-                JsonNode usageNode = root.get("usage");
+            if (resp.getUsage() != null) {
+                OpenAiCompletionResponse.Usage u = resp.getUsage();
                 usage = LlmChatResponse.Usage.builder()
-                        .promptTokens(nullableInt(usageNode, "prompt_tokens"))
-                        .completionTokens(nullableInt(usageNode, "completion_tokens"))
-                        .totalTokens(nullableInt(usageNode, "total_tokens"))
+                        .promptTokens(u.getPromptTokens())
+                        .completionTokens(u.getCompletionTokens())
+                        .totalTokens(u.getTotalTokens())
                         .build();
             }
 
             String content = "";
             String finishReason = null;
-            if (root.has("choices") && root.get("choices").size() > 0) {
-                JsonNode choice = root.get("choices").get(0);
-                finishReason = nullableText(choice, "finish_reason");
-                if (choice.has("message") && choice.get("message").has("content")) {
-                    content = choice.get("message").get("content").asText("");
+            if (resp.getChoices() != null && !resp.getChoices().isEmpty()) {
+                OpenAiCompletionResponse.Choice choice = resp.getChoices().get(0);
+                finishReason = choice.getFinishReason();
+                if (choice.getMessage() != null && choice.getMessage().getContent() != null) {
+                    content = choice.getMessage().getContent();
                 }
             }
 
@@ -179,26 +165,17 @@ public class OpenAiCompatibleClient implements LlmChatClient {
      */
     private String parseStreamChunk(String chunk) {
         try {
-            JsonNode root = objectMapper.readTree(chunk);
-
-            if (root.has("choices") && root.get("choices").size() > 0) {
-                JsonNode choice = root.get("choices").get(0);
-                if (choice.has("delta") && choice.get("delta").has("content")) {
-                    return choice.get("delta").get("content").asText(null);
+            OpenAiSseChunk sse = objectMapper.readValue(chunk, OpenAiSseChunk.class);
+            if (sse.getChoices() != null && !sse.getChoices().isEmpty()) {
+                OpenAiSseChunk.Choice choice = sse.getChoices().get(0);
+                if (choice.getDelta() != null && choice.getDelta().getContent() != null) {
+                    return choice.getDelta().getContent();
                 }
             }
             return null;
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             return null;
         }
-    }
-
-    private Integer nullableInt(JsonNode node, String field) {
-        return node.has(field) && !node.get(field).isNull() ? node.get(field).asInt() : null;
-    }
-
-    private String nullableText(JsonNode node, String field) {
-        return node.has(field) && !node.get(field).isNull() ? node.get(field).asText() : null;
     }
 
     private static String normalizeBaseUrl(String baseUrl) {

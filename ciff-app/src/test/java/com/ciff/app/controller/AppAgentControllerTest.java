@@ -107,30 +107,6 @@ class AppAgentControllerTest {
     }
 
     @Test
-    void create_whenFallbackModelInvalid_shouldReturn400() throws Exception {
-        ModelVO model = buildModelVO(10L, "gpt-4o");
-        given(providerFacade.getModelById(10L)).willReturn(model);
-        given(providerFacade.getModelById(999L)).willReturn(null);
-
-        String body = """
-                {
-                    "name": "test-agent",
-                    "type": "chatbot",
-                    "modelId": 10,
-                    "fallbackModelId": 999,
-                    "systemPrompt": "You are helpful"
-                }
-                """;
-
-        mockMvc.perform(post("/api/v1/app/agents")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1000))
-                .andExpect(jsonPath("$.message").value("模型不存在: 999"));
-    }
-
-    @Test
     void update_whenModelIdValid_shouldReturnOk() throws Exception {
         ModelVO model = buildModelVO(20L, "claude-3");
         given(providerFacade.getModelById(20L)).willReturn(model);

@@ -55,16 +55,15 @@
 
 ## 详细规范索引
 
-- [模块结构与依赖规范](rules/01-module-structure.md) — 项目结构、模块依赖、内部分层、命名约定、跨模块调用规则
-- [LLM 调用技术方案](rules/02-llm-calling.md) — 线程池、Resilience4J 容错、四级超时、重试策略、调用链路
-- [异步任务方案](rules/03-async-tasks.md) — @Async 与 Redis Stream 分层策略、文档处理消费者
-- [部署架构](rules/04-deployment.md) — docker-compose.yml、Nginx SSE 配置、备份策略、关键参数
-- [工程规范](rules/05-engineering.md) — SSE 异步、缓存策略、LLM 日志脱敏
-- [数据库性能规范](rules/06-database-performance.md) — 索引原则、大表应对、分页规范、建表模板、全表索引清单
-- [接口规范](rules/07-api-specification.md) — REST API 设计规范
-- [Java 编码规范](rules/08-java-coding.md) — 命名、异常处理、日志、并发（基于阿里巴巴 Java 开发手册）
-- [测试规范](rules/09-testing.md) — 测试分层、命名约定、编写规范、禁止事项
-- [前端开发规范](rules/10-frontend.md) — 设计系统、公共组件、编码规范、页面模板、API 层规范
+| 文件 | 内容 | 代码示例备份 |
+|------|------|-------------|
+| [01-模块结构与依赖规范](rules/01-module-structure.md) | 项目结构、模块依赖、内部分层、命名约定、跨模块调用 | — |
+| [02-LLM 调用技术方案](rules/02-llm-calling.md) | 线程池职责、Resilience4J 容错、四级超时、重试策略、调用链路 | `docs/rules-snippets/02-threadpool-config.java` `02-resilience4j-config.yml` |
+| [03-异步任务方案](rules/03-async-tasks.md) | @Async 与 Redis Stream 分层策略 | `docs/rules-snippets/03-async-examples.java` |
+| [04-部署架构](rules/04-deployment.md) | 组件拓扑、Nginx SSE 配置、备份策略、关键参数 | `docs/rules-snippets/04-docker-compose.yml` |
+| [05-工程/编码/接口/测试规范](rules/05-conventions.md) | 工程规范、REST 接口规范、Java 编码规范、测试规范 | — |
+| [06-数据库性能规范](rules/06-database-performance.md) | 索引原则、大表应对、分页规范、SQL 规范、事务规范 | `docs/rules-snippets/06-create-table-templates.sql` `06-full-index-list.sql` |
+| [10-前端开发规范](rules/10-frontend.md) | 技术栈、设计系统、布局规范、编码规范、API 层规范 | `docs/rules-snippets/10-frontend-examples.vue` |
 
 ## 行为指令
 

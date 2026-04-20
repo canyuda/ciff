@@ -27,4 +27,15 @@ public interface KnowledgeFacade {
      * @return ranked chunks with relevance scores
      */
     List<KnowledgeChunkPO> retrieve(String query, List<Long> knowledgeIds, int topN);
+
+    /**
+     * Retrieve relevant chunks for RAG with optional reranking.
+     *
+     * @param query        user query text
+     * @param knowledgeIds knowledge base IDs to search within
+     * @param topN         max results to return
+     * @param useReranker  whether to apply reranking
+     * @return ranked chunks with relevance scores
+     */
+    List<KnowledgeChunkPO> retrieve(String query, List<Long> knowledgeIds, int topN, boolean useReranker);
 }

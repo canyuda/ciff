@@ -43,9 +43,6 @@ public class AppAgentController {
     @Operation(summary = "创建 Agent（含模型校验）")
     public Result<AgentVO> create(@Valid @RequestBody AgentCreateRequest request) {
         validateModelExists(request.getModelId());
-        if (request.getFallbackModelId() != null) {
-            validateModelExists(request.getFallbackModelId());
-        }
 
         AgentVO vo = agentService.create(request, UserContext.getUserId());
         enrichModelNames(vo);
@@ -59,9 +56,6 @@ public class AppAgentController {
             @Valid @RequestBody AgentUpdateRequest request) {
         if (request.getModelId() != null) {
             validateModelExists(request.getModelId());
-        }
-        if (request.getFallbackModelId() != null) {
-            validateModelExists(request.getFallbackModelId());
         }
 
         AgentVO vo = agentService.update(id, request, UserContext.getUserId());
@@ -167,10 +161,6 @@ public class AppAgentController {
         if (vo.getModelId() != null) {
             ModelVO model = providerFacade.getModelById(vo.getModelId());
             vo.setModelName(model != null ? model.getName() : null);
-        }
-        if (vo.getFallbackModelId() != null) {
-            ModelVO model = providerFacade.getModelById(vo.getFallbackModelId());
-            vo.setFallbackModelName(model != null ? model.getName() : null);
         }
     }
 

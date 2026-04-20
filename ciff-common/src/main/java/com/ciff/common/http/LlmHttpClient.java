@@ -95,6 +95,7 @@ public class LlmHttpClient {
     }
 
     private void doGet(String url, Map<String, String> headers) {
+        log.debug("LLM GET request - url: {}, headers: {}", maskApiKey(url), maskSensitiveHeaders(headers));
         long start = System.currentTimeMillis();
         syncClient.get()
                 .uri(url)
@@ -120,6 +121,7 @@ public class LlmHttpClient {
     }
 
     private String doPost(String url, Map<String, String> headers, String body) {
+        log.debug("LLM POST request - url: {}, headers: {}, body: {}", maskApiKey(url), maskSensitiveHeaders(headers), body);
         long start = System.currentTimeMillis();
 
         return syncClient.post()
@@ -162,6 +164,7 @@ public class LlmHttpClient {
     }
 
     private void doStream(String url, Map<String, String> headers, String body, Consumer<String> callback) {
+        log.debug("LLM STREAM request - url: {}, headers: {}, body: {}", maskApiKey(url), maskSensitiveHeaders(headers), body);
         long start = System.currentTimeMillis();
         AtomicBoolean firstTokenReceived = new AtomicBoolean(false);
         AtomicLong lastEventTime = new AtomicLong(System.currentTimeMillis());
@@ -254,5 +257,21 @@ public class LlmHttpClient {
 
     private String maskApiKey(String url) {
         return url.replaceAll("([?&])(api_key|key|token|secret)=([^&]+)", "$1$2=***");
+    }
+
+    private String maskSensitiveHeaders(Map<String, String> headers) {
+        if (headers == null) {
+            return "null";
+        }
+        return headers.entrySet().stream()
+                .map(e -> {
+                    String key = e.getKey().toLowerCase();
+                    if (key.contains("key") || key.contains("token") || key.contains("auth") || key.contains("secret")) {
+                        return e.getKey() + "=***";
+                    }
+                    return e.getKey() + "=" + e.getValue();
+                })
+                .toList()
+                .toString();
     }
 }

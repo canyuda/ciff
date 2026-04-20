@@ -6,13 +6,12 @@ import com.ciff.common.util.ApiKeyEncryptor;
 import com.ciff.provider.dto.ProviderAuthConfig;
 import com.ciff.provider.entity.ProviderPO;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -98,18 +97,9 @@ public class ClaudeClient implements LlmChatClient {
      * - max_tokens 必填
      */
     private String buildRequestBody(LlmChatRequest request, boolean stream) {
-        ObjectNode root = objectMapper.createObjectNode();
-        root.put("model", request.getModelName());
-        root.put("stream", stream);
-        root.put("max_tokens", request.getMaxTokens() != null ? request.getMaxTokens() : 4096);
-
-        if (request.getTemperature() != null) {
-            root.put("temperature", request.getTemperature());
-        }
-
-        // 分离 system 消息
+        // Separate system messages from conversation messages
         StringBuilder systemContent = new StringBuilder();
-        ArrayNode messagesNode = root.putArray("messages");
+        List<LlmChatRequest.Message> chatMessages = new ArrayList<>();
         for (LlmChatRequest.Message msg : request.getMessages()) {
             if ("system".equals(msg.getRole())) {
                 if (!systemContent.isEmpty()) {
@@ -117,18 +107,20 @@ public class ClaudeClient implements LlmChatClient {
                 }
                 systemContent.append(msg.getContent());
             } else {
-                ObjectNode msgNode = messagesNode.addObject();
-                msgNode.put("role", msg.getRole());
-                msgNode.put("content", msg.getContent());
+                chatMessages.add(msg);
             }
         }
 
-        if (!systemContent.isEmpty()) {
-            root.put("system", systemContent.toString());
-        }
-
+        ClaudeMessagesRequest body = ClaudeMessagesRequest.builder()
+                .model(request.getModelName())
+                .stream(stream)
+                .maxTokens(request.getMaxTokens() != null ? request.getMaxTokens() : 4096)
+                .temperature(request.getTemperature())
+                .system(systemContent.isEmpty() ? null : systemContent.toString())
+                .messages(chatMessages)
+                .build();
         try {
-            return objectMapper.writeValueAsString(root);
+            return objectMapper.writeValueAsString(body);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize request body", e);
         }
@@ -136,14 +128,14 @@ public class ClaudeClient implements LlmChatClient {
 
     private LlmChatResponse parseResponse(String responseBody) {
         try {
-            JsonNode root = objectMapper.readTree(responseBody);
+            ClaudeMessagesResponse resp = objectMapper.readValue(responseBody, ClaudeMessagesResponse.class);
 
             LlmChatResponse.Usage usage = null;
-            if (root.has("usage") && !root.get("usage").isNull()) {
-                JsonNode usageNode = root.get("usage");
+            if (resp.getUsage() != null) {
+                ClaudeMessagesResponse.Usage u = resp.getUsage();
                 usage = LlmChatResponse.Usage.builder()
-                        .promptTokens(nullableInt(usageNode, "input_tokens"))
-                        .completionTokens(nullableInt(usageNode, "output_tokens"))
+                        .promptTokens(u.getInputTokens())
+                        .completionTokens(u.getOutputTokens())
                         .build();
                 if (usage.getPromptTokens() != null && usage.getCompletionTokens() != null) {
                     usage.setTotalTokens(usage.getPromptTokens() + usage.getCompletionTokens());
@@ -151,23 +143,19 @@ public class ClaudeClient implements LlmChatClient {
             }
 
             String content = "";
-            String finishReason = null;
-            if (root.has("content") && root.get("content").isArray()) {
+            if (resp.getContent() != null) {
                 StringBuilder sb = new StringBuilder();
-                for (JsonNode block : root.get("content")) {
-                    if ("text".equals(block.path("type").asText())) {
-                        sb.append(block.path("text").asText(""));
+                for (ClaudeMessagesResponse.ContentBlock block : resp.getContent()) {
+                    if ("text".equals(block.getType())) {
+                        sb.append(block.getText() != null ? block.getText() : "");
                     }
                 }
                 content = sb.toString();
             }
-            if (root.has("stop_reason")) {
-                finishReason = root.get("stop_reason").asText(null);
-            }
 
             return LlmChatResponse.builder()
                     .content(content)
-                    .finishReason(finishReason)
+                    .finishReason(resp.getStopReason())
                     .usage(usage)
                     .build();
         } catch (JsonProcessingException e) {
@@ -182,23 +170,16 @@ public class ClaudeClient implements LlmChatClient {
      */
     private String parseStreamChunk(String chunk) {
         try {
-            JsonNode root = objectMapper.readTree(chunk);
-            String type = root.path("type").asText("");
-
-            if ("content_block_delta".equals(type)) {
-                JsonNode delta = root.path("delta");
-                if ("text_delta".equals(delta.path("type").asText())) {
-                    return delta.path("text").asText(null);
+            ClaudeSseChunk sse = objectMapper.readValue(chunk, ClaudeSseChunk.class);
+            if ("content_block_delta".equals(sse.getType()) && sse.getDelta() != null) {
+                if ("text_delta".equals(sse.getDelta().getType())) {
+                    return sse.getDelta().getText();
                 }
             }
             return null;
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             return null;
         }
-    }
-
-    private Integer nullableInt(JsonNode node, String field) {
-        return node.has(field) && !node.get(field).isNull() ? node.get(field).asInt() : null;
     }
 
     private static String normalizeBaseUrl(String baseUrl) {

@@ -45,8 +45,6 @@ Layer 6: ciff-app                            （组装入口）
 
 ## 模块内部结构
 
-所有业务模块（ciff-provider / ciff-agent / ciff-chat / ciff-knowledge / ciff-mcp / ciff-workflow）统一遵循：
-
 ```
 com.ciff.{module}
 ├── facade/              # 对外接口（跨模块调用的唯一入口）
@@ -104,38 +102,7 @@ com.ciff.{module}
 
 ## 统一响应与异常
 
-```java
-// ciff-common: Result<T> 统一响应
-public class Result<T> {
-    private int code;
-    private String message;
-    private T data;
-}
-
-// controller 使用
-@GetMapping("/{id}")
-public Result<AgentVO> getAgent(@PathVariable Long id) {
-    return Result.success(agentFacade.getAgent(id));
-}
-
-// ciff-common: 基础异常
-public class BizException extends RuntimeException {
-    private final int code;
-}
-
-// 模块内异常继承 BizException，code 用 4 位业务错误码（参见 07-api-specification.md）
-public class AgentNotFoundException extends BizException {
-    public AgentNotFoundException(Long agentId) {
-        super(3001, "Agent not found: " + agentId);
-    }
-}
-
-// ciff-common: 全局异常捕获
-@RestControllerAdvice
-public class GlobalExceptionHandler {
-    @ExceptionHandler(BizException.class)
-    public Result<Void> handle(BizException e) {
-        return Result.fail(e.getCode(), e.getMessage());
-    }
-}
-```
+- 统一响应：`Result<T>`（code / message / data），见源码 `ciff-common`
+- 基础异常：`BizException`（code + message）
+- 模块内异常继承 BizException，code 用 4 位业务错误码
+- 全局异常捕获：`@RestControllerAdvice`

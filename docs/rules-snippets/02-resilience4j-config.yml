@@ -1,0 +1,26 @@
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 80
+        slow-call-duration-threshold: 15s
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+    instances:
+      openai: { base-config: default }
+      claude: { base-config: default }
+      gemini: { base-config: default }
+      ollama: { base-config: default, slow-call-duration-threshold: 30s }
+  bulkhead:
+    configs:
+      default:
+        max-concurrent-calls: 20
+        max-wait-duration: 5s
+    instances:
+      openai: { base-config: default }
+      claude: { base-config: default }
+      gemini: { base-config: default }
+      ollama: { base-config: default, max-concurrent-calls: 5 }

@@ -2,6 +2,8 @@ package com.ciff.provider.dto;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 /**
  * Model default parameters.
  * Stored as JSON in t_model.default_params column.
@@ -13,13 +15,13 @@ public class ModelDefaultParam {
      * Controls randomness. Lower values = more deterministic.
      * Range: 0.0 ~ 2.0, default varies by provider.
      */
-    private Double temperature;
+    private BigDecimal temperature;
 
     /**
      * Nucleus sampling threshold.
      * Range: 0.0 ~ 1.0.
      */
-    private Double topP;
+    private BigDecimal topP;
 
     /**
      * Maximum tokens for the completion.
@@ -31,11 +33,11 @@ public class ModelDefaultParam {
      * Frequency penalty. Positive values reduce repetition.
      * Range: -2.0 ~ 2.0.
      */
-    private Double frequencyPenalty;
+    private BigDecimal frequencyPenalty;
 
     /**
-     * Presence penalty. Positive values encourage new topics.
+     * presence penalty. positive values encourage new topics.
      * Range: -2.0 ~ 2.0.
      */
-    private Double presencePenalty;
+    private BigDecimal presencePenalty;
 }

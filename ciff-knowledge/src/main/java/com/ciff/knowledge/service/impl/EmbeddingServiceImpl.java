@@ -2,12 +2,11 @@ package com.ciff.knowledge.service.impl;
 
 import com.ciff.common.http.LlmHttpClient;
 import com.ciff.knowledge.config.EmbeddingProperties;
+import com.ciff.knowledge.dto.EmbeddingRequestBody;
+import com.ciff.knowledge.dto.EmbeddingResponse;
 import com.ciff.knowledge.service.EmbeddingService;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -60,12 +59,12 @@ public class EmbeddingServiceImpl implements EmbeddingService {
     }
 
     private String buildRequestBody(List<String> texts) {
-        ObjectNode root = objectMapper.createObjectNode();
-        root.put("model", properties.getModel());
-        ArrayNode inputArray = root.putArray("input");
-        texts.forEach(inputArray::add);
+        EmbeddingRequestBody body = EmbeddingRequestBody.builder()
+                .model(properties.getModel())
+                .input(texts)
+                .build();
         try {
-            return objectMapper.writeValueAsString(root);
+            return objectMapper.writeValueAsString(body);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to build embedding request body", e);
         }
@@ -73,22 +72,20 @@ public class EmbeddingServiceImpl implements EmbeddingService {
 
     private List<float[]> parseResponse(String response, int expectedCount) {
         try {
-            JsonNode root = objectMapper.readTree(response);
-            JsonNode dataNode = root.get("data");
-            if (dataNode == null || !dataNode.isArray()) {
+            EmbeddingResponse resp = objectMapper.readValue(response, EmbeddingResponse.class);
+
+            if (resp.getData() == null || resp.getData().isEmpty()) {
                 throw new IllegalStateException("Embedding API response missing 'data' field");
             }
 
             // Sort by index to ensure correct order
-            List<float[]> embeddings = new ArrayList<>(dataNode.size());
-            for (JsonNode item : dataNode) {
-                int index = item.get("index").asInt();
-                JsonNode embeddingNode = item.get("embedding");
-                float[] vector = new float[embeddingNode.size()];
-                for (int i = 0; i < embeddingNode.size(); i++) {
-                    vector[i] = (float) embeddingNode.get(i).asDouble();
+            List<float[]> embeddings = new ArrayList<>(resp.getData().size());
+            for (EmbeddingResponse.DataItem item : resp.getData()) {
+                float[] vector = new float[item.getEmbedding().length];
+                for (int i = 0; i < item.getEmbedding().length; i++) {
+                    vector[i] = (float) item.getEmbedding()[i];
                 }
-                embeddings.add(index, vector);
+                embeddings.add(item.getIndex(), vector);
             }
 
             if (embeddings.size() != expectedCount) {
@@ -96,9 +93,8 @@ public class EmbeddingServiceImpl implements EmbeddingService {
                         "Embedding count mismatch: expected " + expectedCount + ", got " + embeddings.size());
             }
 
-            JsonNode usage = root.get("usage");
-            if (usage != null) {
-                log.info("Embedding API usage: {} prompt_tokens", usage.get("prompt_tokens").asInt());
+            if (resp.getUsage() != null) {
+                log.info("Embedding API usage: {} prompt_tokens", resp.getUsage().getPromptTokens());
             }
 
             return embeddings;

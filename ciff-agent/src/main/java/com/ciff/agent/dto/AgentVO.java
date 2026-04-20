@@ -7,7 +7,6 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @Data
 @Schema(description = "Agent 响应")
@@ -37,14 +36,8 @@ public class AgentVO {
     @Schema(description = "系统提示词")
     private String systemPrompt;
 
-    @Schema(description = "模型参数覆盖")
-    private Map<String, Object> modelParams;
-
-    @Schema(description = "回退模型 ID")
-    private Long fallbackModelId;
-
-    @Schema(description = "回退模型名称")
-    private String fallbackModelName;
+    @Schema(description = "模型参数配置")
+    private AgentModelParam modelParams;
 
     @Schema(description = "状态")
     private String status;

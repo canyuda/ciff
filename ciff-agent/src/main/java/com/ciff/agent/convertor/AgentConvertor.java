@@ -20,7 +20,7 @@ public final class AgentConvertor {
         po.setWorkflowId(request.getWorkflowId());
         po.setSystemPrompt(request.getSystemPrompt());
         po.setModelParams(request.getModelParams());
-        po.setFallbackModelId(request.getFallbackModelId());
+        po.setFallbackModelId(request.getModelId());
         po.setStatus("draft");
         return po;
     }
@@ -37,6 +37,7 @@ public final class AgentConvertor {
         }
         if (request.getModelId() != null) {
             po.setModelId(request.getModelId());
+            po.setFallbackModelId(request.getModelId());
         }
         if (request.getWorkflowId() != null) {
             po.setWorkflowId(request.getWorkflowId());
@@ -46,9 +47,6 @@ public final class AgentConvertor {
         }
         if (request.getModelParams() != null) {
             po.setModelParams(request.getModelParams());
-        }
-        if (request.getFallbackModelId() != null) {
-            po.setFallbackModelId(request.getFallbackModelId());
         }
         if (request.getStatus() != null) {
             po.setStatus(request.getStatus());
@@ -65,7 +63,6 @@ public final class AgentConvertor {
         vo.setWorkflowId(po.getWorkflowId());
         vo.setSystemPrompt(po.getSystemPrompt());
         vo.setModelParams(po.getModelParams());
-        vo.setFallbackModelId(po.getFallbackModelId());
         vo.setStatus(po.getStatus());
         vo.setCreateTime(po.getCreateTime());
         vo.setUpdateTime(po.getUpdateTime());

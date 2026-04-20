@@ -39,6 +39,10 @@ mybatis-plus:
 logging:
   level:
     com.ciff: info
+    com:
+      ciff:
+        common:
+          http: debug
 
 springdoc:
   swagger-ui:

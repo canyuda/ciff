@@ -36,25 +36,20 @@
           <div
             class="sidebar__nav-item sidebar__nav-item--group"
             :class="{ 'sidebar__nav-item--active': isMenuActive(item.path) }"
+            @click="toggleMenu(item.path)"
           >
-            <router-link
-              :to="item.path"
-              class="sidebar__group-link"
-            >
-              <el-icon :size="18">
-                <component :is="item.icon" />
-              </el-icon>
-              <transition name="fade-text">
-                <span v-if="!collapsed" class="sidebar__nav-label">{{ item.label }}</span>
-              </transition>
-            </router-link>
+            <el-icon :size="18">
+              <component :is="item.icon" />
+            </el-icon>
+            <transition name="fade-text">
+              <span v-if="!collapsed" class="sidebar__nav-label">{{ item.label }}</span>
+            </transition>
             <transition name="fade-text">
               <el-icon
                 v-if="!collapsed"
                 :size="12"
                 class="sidebar__arrow"
                 :class="{ 'sidebar__arrow--expanded': isExpanded(item.path) }"
-                @click.stop="toggleMenu(item.path)"
               >
                 <ArrowDown />
               </el-icon>
@@ -100,7 +95,7 @@ import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   Setting,
-  Document,
+
   Tools,
   User,
   ChatDotRound,
@@ -123,7 +118,6 @@ const expandedMenus = ref<Set<string>>(new Set())
 
 const menuItems: MenuItem[] = [
   { path: '/provider', label: '供应商管理', icon: Setting },
-  { path: '/model', label: '模型管理', icon: Document },
   { path: '/tool', label: '工具管理', icon: Tools },
   {
     path: '/knowledge',
@@ -310,13 +304,11 @@ function isMenuActive(path: string) {
 .sidebar__arrow {
   margin-left: auto;
   transition: transform var(--ciff-duration-fast) var(--ciff-ease-default);
-  color: var(--ciff-neutral-500);
-  padding: var(--ciff-space-2-5) var(--ciff-space-3);
-  cursor: pointer;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.sidebar__arrow:hover {
-  color: var(--ciff-sidebar-text-hover);
+.sidebar__nav-item--group:hover .sidebar__arrow {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .sidebar__arrow--expanded {
@@ -324,24 +316,7 @@ function isMenuActive(path: string) {
 }
 
 .sidebar__nav-item--group {
-  padding: 0;
-}
-
-.sidebar__group-link {
-  display: flex;
-  align-items: center;
-  gap: var(--ciff-space-3);
-  padding: var(--ciff-space-2-5) var(--ciff-space-3);
-  color: inherit;
-  text-decoration: none;
-  flex: 1;
-  min-width: 0;
-  border-radius: var(--ciff-radius-md);
-}
-
-.sidebar__group-link:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--ciff-sidebar-text-hover);
+  cursor: pointer;
 }
 
 /* ---- Submenu ---- */

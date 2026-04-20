@@ -3,6 +3,18 @@ import type { PageResult } from '@/types/common'
 import type { ToolVO } from './tool'
 import type { KnowledgeVO } from './knowledge'
 
+export const DEFAULT_MODEL_PARAMS: AgentModelParam = {
+  temperature: 0.7,
+  maxTokens: 4096,
+  maxContextTurns: 5,
+}
+
+export interface AgentModelParam {
+  temperature?: number | null
+  maxTokens?: number | null
+  maxContextTurns?: number | null
+}
+
 export interface AgentVO {
   id?: number
   name: string
@@ -12,9 +24,7 @@ export interface AgentVO {
   modelName?: string
   workflowId?: number | null
   systemPrompt: string
-  modelParams?: Record<string, unknown> | null
-  fallbackModelId?: number | null
-  fallbackModelName?: string
+  modelParams?: AgentModelParam | null
   status: string
   tools?: ToolVO[]
   knowledges?: KnowledgeVO[]
@@ -30,8 +40,7 @@ export interface AgentCreateRequest {
   modelId: number
   workflowId?: number | null
   systemPrompt: string
-  modelParams?: Record<string, unknown> | null
-  fallbackModelId?: number | null
+  modelParams?: AgentModelParam | null
   toolIds?: number[]
   knowledgeIds?: number[]
 }
@@ -43,8 +52,7 @@ export interface AgentUpdateRequest {
   modelId?: number
   workflowId?: number | null
   systemPrompt?: string
-  modelParams?: Record<string, unknown> | null
-  fallbackModelId?: number | null
+  modelParams?: AgentModelParam | null
   status?: string
   toolIds?: number[]
   knowledgeIds?: number[]

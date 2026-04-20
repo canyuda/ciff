@@ -3,11 +3,10 @@ package com.ciff.agent.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.ciff.agent.dto.AgentModelParam;
 import com.ciff.common.entity.SoftDeletableEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.util.Map;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -29,9 +28,8 @@ public class AgentPO extends SoftDeletableEntity {
 
     private String systemPrompt;
 
-    /** override: temperature, max_tokens, etc. */
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private Map<String, Object> modelParams;
+    private AgentModelParam modelParams;
 
     private Long fallbackModelId;
 

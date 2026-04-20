@@ -45,6 +45,11 @@ public class KnowledgeFacadeImpl implements KnowledgeFacade {
 
     @Override
     public List<KnowledgeChunkPO> retrieve(String query, List<Long> knowledgeIds, int topN) {
+        return retrieve(query, knowledgeIds, topN, true);
+    }
+
+    @Override
+    public List<KnowledgeChunkPO> retrieve(String query, List<Long> knowledgeIds, int topN, boolean useReranker) {
         // 1. Embed query
         float[] queryEmbedding = embeddingService.embed(List.of(query)).get(0);
 
@@ -63,6 +68,11 @@ public class KnowledgeFacadeImpl implements KnowledgeFacade {
 
         if (candidates.isEmpty()) {
             return Collections.emptyList();
+        }
+
+        if (!useReranker) {
+            // Skip reranking, return topN directly by vector similarity
+            return candidates.stream().limit(topN).toList();
         }
 
         // 3. Rerank

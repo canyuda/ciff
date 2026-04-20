@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 
 @Data
 @Schema(description = "创建 Agent 请求")
@@ -37,11 +36,8 @@ public class AgentCreateRequest {
     @Schema(description = "系统提示词")
     private String systemPrompt;
 
-    @Schema(description = "模型参数覆盖（temperature, max_tokens 等）")
-    private Map<String, Object> modelParams;
-
-    @Schema(description = "回退模型 ID")
-    private Long fallbackModelId;
+    @Schema(description = "模型参数配置")
+    private AgentModelParam modelParams;
 
     @Schema(description = "绑定的工具 ID 列表")
     private List<Long> toolIds;

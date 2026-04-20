@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <PageHeader title="Agent 管理" description="创建和管理 AI Agent 智能助手，配置模型、工具和提示词">
-      <el-button type="primary" @click="dialogRef?.open()">
+      <el-button type="primary" @click="openCreateDialog()">
         <el-icon><Plus /></el-icon>创建 Agent
       </el-button>
     </PageHeader>
@@ -74,6 +74,45 @@
             placeholder="You are a helpful assistant..."
           />
         </el-form-item>
+        <el-form-item label="模型参数">
+          <div class="model-params">
+            <div class="param-row">
+              <span class="param-label">Temperature</span>
+              <el-slider
+                v-model="data.modelParams!.temperature"
+                :min="0"
+                :max="2"
+                :step="0.1"
+                :show-input="true"
+                input-size="small"
+                :show-input-controls="false"
+              />
+            </div>
+            <div class="param-row">
+              <span class="param-label">Max Tokens</span>
+              <el-input-number
+                v-model="data.modelParams!.maxTokens"
+                :min="1"
+                :max="128000"
+                :step="256"
+                controls-position="right"
+                placeholder="默认"
+                style="width: 200px"
+              />
+            </div>
+            <div class="param-row">
+              <span class="param-label">上下文轮数</span>
+              <el-input-number
+                v-model="data.modelParams!.maxContextTurns"
+                :min="1"
+                :max="50"
+                controls-position="right"
+                placeholder="默认"
+                style="width: 200px"
+              />
+            </div>
+          </div>
+        </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input v-model="data.description" placeholder="Agent 功能描述" />
         </el-form-item>
@@ -126,9 +165,11 @@ import {
   createAgent,
   updateAgent,
   deleteAgent,
+  DEFAULT_MODEL_PARAMS,
   type AgentVO,
   type AgentCreateRequest,
   type AgentUpdateRequest,
+  type AgentModelParam,
 } from '@/api/agent'
 import { getModels, type ModelVO } from '@/api/model'
 import { getTools, type ToolVO } from '@/api/tool'
@@ -151,6 +192,7 @@ interface AgentForm {
   type: string
   modelId?: number
   systemPrompt: string
+  modelParams?: AgentModelParam
   toolIds?: number[]
   knowledgeIds?: number[]
 }
@@ -202,6 +244,12 @@ async function fetchAgents(params: PageParams) {
   return getAgents({ page: params.page, pageSize: params.pageSize })
 }
 
+function openCreateDialog() {
+  dialogRef.value?.open({
+    modelParams: { ...DEFAULT_MODEL_PARAMS },
+  } as Partial<AgentForm>)
+}
+
 async function openEditDialog(id?: number) {
   if (!id) return
   const detail = await getAgentById(id)
@@ -212,13 +260,28 @@ async function openEditDialog(id?: number) {
     type: detail.type,
     modelId: detail.modelId,
     systemPrompt: detail.systemPrompt,
+    modelParams: {
+      temperature: detail.modelParams?.temperature ?? DEFAULT_MODEL_PARAMS.temperature!,
+      maxTokens: detail.modelParams?.maxTokens ?? DEFAULT_MODEL_PARAMS.maxTokens!,
+      maxContextTurns: detail.modelParams?.maxContextTurns ?? DEFAULT_MODEL_PARAMS.maxContextTurns!,
+    },
     toolIds: detail.tools?.map((t) => t.id!).filter(Boolean),
     knowledgeIds: detail.knowledges?.map((k) => k.id!).filter(Boolean),
   }
   dialogRef.value?.open(formData)
 }
 
+function cleanModelParams(params?: AgentModelParam): AgentModelParam | undefined {
+  if (!params) return undefined
+  const cleaned: AgentModelParam = {}
+  if (params.temperature != null) cleaned.temperature = params.temperature
+  if (params.maxTokens != null) cleaned.maxTokens = params.maxTokens
+  if (params.maxContextTurns != null) cleaned.maxContextTurns = params.maxContextTurns
+  return Object.keys(cleaned).length > 0 ? cleaned : undefined
+}
+
 async function handleSubmit(form: AgentForm) {
+  const modelParams = cleanModelParams(form.modelParams)
   if (form.id) {
     const payload: AgentUpdateRequest = {
       name: form.name,
@@ -226,6 +289,7 @@ async function handleSubmit(form: AgentForm) {
       type: form.type,
       modelId: form.modelId,
       systemPrompt: form.systemPrompt,
+      modelParams: modelParams ?? null,
       toolIds: form.toolIds,
       knowledgeIds: form.knowledgeIds,
     }
@@ -238,6 +302,7 @@ async function handleSubmit(form: AgentForm) {
       type: form.type,
       modelId: form.modelId!,
       systemPrompt: form.systemPrompt,
+      modelParams: modelParams ?? null,
       toolIds: form.toolIds,
       knowledgeIds: form.knowledgeIds,
     }
@@ -261,5 +326,27 @@ async function handleDelete(id?: number) {
 <style scoped>
 .page-container {
   max-width: 1600px;
+}
+
+.model-params {
+  width: 100%;
+}
+
+.param-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.param-row:last-child {
+  margin-bottom: 0;
+}
+
+.param-label {
+  width: 90px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
 }
 </style>

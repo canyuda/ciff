@@ -22,7 +22,6 @@ const route = useRoute()
 
 const breadcrumbMap: Record<string, string> = {
   '/provider': '供应商管理',
-  '/model': '模型管理',
   '/tool': '工具管理',
   '/knowledge': '知识库管理',
   '/knowledge-documents': '文档管理',
