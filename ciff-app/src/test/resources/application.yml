@@ -1,0 +1,89 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DB:ciff}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:123456}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration/mysql
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:1}
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+logging:
+  level:
+    com.ciff: info
+    com:
+      ciff:
+        common:
+          http: debug
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+ciff:
+  security:
+    api-key-secret: test-secret-key-with-32-chars-long
+  upload:
+    path: ${CIFF_UPLOAD_PATH:./uploads}
+  llm:
+    timeout:
+      first-token: ${LLM_FIRST_TOKEN_TIMEOUT:30s}
+      token-interval: ${LLM_TOKEN_INTERVAL_TIMEOUT:15s}
+  resilience:
+    circuit-breaker:
+      sliding-window-size: 10
+      failure-rate-threshold: 50
+      wait-duration-in-open-state: 30s
+      permitted-number-of-calls-in-half-open-state: 3
+  chunk:
+    size: ${CHUNK_SIZE:700}
+    overlap: ${CHUNK_OVERLAP:70}
+  embedding:
+    base-url: ${EMBEDDING_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
+    api-key: ${EMBEDDING_API_KEY:}
+    model: ${EMBEDDING_MODEL:text-embedding-v3}
+    batch-size: ${EMBEDDING_BATCH_SIZE:10}
+  rerank:
+    endpoint: ${RERANK_ENDPOINT:https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank}
+    api-key: ${RERANK_API_KEY:}
+    model: ${RERANK_MODEL:gte-rerank-v2}
+    timeout-ms: ${RERANK_TIMEOUT_MS:800}
+    top-n: ${RERANK_TOP_N:5}
+    score-threshold: ${RERANK_SCORE_THRESHOLD:0.3}
+  pgvector:
+    url: jdbc:postgresql://${PGVECTOR_HOST:localhost}:${PGVECTOR_PORT:5432}/${PGVECTOR_DB:ciff}
+    username: ${PGVECTOR_USER:postgres}
+    password: ${PGVECTOR_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    maximum-pool-size: 10
+    connection-timeout: 30000

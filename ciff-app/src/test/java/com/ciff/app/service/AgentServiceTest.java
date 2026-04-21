@@ -6,6 +6,7 @@ import com.ciff.agent.dto.AgentUpdateRequest;
 import com.ciff.agent.dto.AgentVO;
 import com.ciff.agent.entity.AgentPO;
 import com.ciff.agent.mapper.AgentMapper;
+import com.ciff.agent.service.AgentKnowledgeService;
 import com.ciff.agent.service.AgentToolService;
 import com.ciff.agent.service.impl.AgentServiceImpl;
 import com.ciff.agent.service.impl.AgentDetailCacheHelper;
@@ -39,6 +40,9 @@ class AgentServiceTest {
 
     @Mock
     private AgentDetailCacheHelper detailCacheHelper;
+
+    @Mock
+    private AgentKnowledgeService agentKnowledgeService;
 
     @InjectMocks
     private AgentServiceImpl agentService;

@@ -2,6 +2,7 @@ package com.ciff.app.controller;
 
 import com.ciff.agent.controller.AgentController;
 import com.ciff.agent.dto.AgentVO;
+import com.ciff.agent.service.AgentKnowledgeService;
 import com.ciff.agent.service.AgentService;
 import com.ciff.agent.service.AgentToolService;
 import com.ciff.common.context.UserContext;
@@ -50,6 +51,9 @@ class AppAgentControllerTest {
 
     @MockBean
     private ToolService toolService;
+
+    @MockBean
+    private AgentKnowledgeService agentKnowledgeService;
 
     @BeforeEach
     void setUp() {
