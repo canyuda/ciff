@@ -3,6 +3,7 @@ package com.ciff.chat.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.ciff.chat.dto.ChatMessageMetadata;
 import com.ciff.chat.dto.TokenUsage;
 import lombok.Data;
 
@@ -31,7 +32,7 @@ public class ChatMessagePO {
     private String toolCallId;
 
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private Object metadata;
+    private ChatMessageMetadata metadata;
 
     private LocalDateTime createTime;
 }

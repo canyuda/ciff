@@ -5,9 +5,9 @@
     <!-- Operation Area -->
     <div class="ciff-card operation-area">
       <el-form :model="form" label-position="top" class="recall-form">
-        <!-- Row 1: knowledge base, rerank switch, confidence -->
+        <!-- Row 1: knowledge base, rerank switch, filter type -->
         <el-row :gutter="24">
-          <el-col :span="12">
+          <el-col :span="10">
             <el-form-item label="知识库" required>
               <el-select
                 v-model="form.knowledgeIds"
@@ -29,7 +29,19 @@
               <el-switch v-model="form.enableRerank" />
             </el-form-item>
           </el-col>
-          <el-col v-if="form.enableRerank" :span="8">
+          <el-col v-if="form.enableRerank" :span="10">
+            <el-form-item label="置信度过滤方式">
+              <el-radio-group v-model="form.filterType" class="filter-radio-group">
+                <el-radio label="fixed">固定分数</el-radio>
+                <el-radio label="relative">分数比例</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <!-- Row 1.5: filter parameters -->
+        <el-row v-if="form.enableRerank" :gutter="24">
+          <el-col v-if="form.filterType === 'fixed'" :span="8">
             <el-form-item label="置信度过滤上限">
               <el-input-number
                 v-model="form.confidence"
@@ -41,7 +53,34 @@
               />
             </el-form-item>
           </el-col>
+          <template v-if="form.filterType === 'relative'">
+            <el-col :span="6">
+              <el-form-item label="相对比率">
+                <el-input-number
+                  v-model="form.ratio"
+                  :min="0"
+                  :max="1"
+                  :step="0.05"
+                  :precision="2"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="绝对最小分数">
+                <el-input-number
+                  v-model="form.floor"
+                  :min="0"
+                  :max="1"
+                  :step="0.05"
+                  :precision="2"
+                  style="width: 100%"
+                />
+              </el-form-item>
+            </el-col>
+          </template>
         </el-row>
+
         <!-- Row 2: query text + recall button -->
         <el-row :gutter="24">
           <el-col :span="20">
@@ -116,7 +155,10 @@ const form = ref({
   knowledgeIds: [] as number[],
   query: '',
   enableRerank: true,
+  filterType: 'fixed' as 'fixed' | 'relative',
   confidence: 0.3,
+  ratio: 0.6,
+  floor: 0.05,
 })
 
 onMounted(() => {
@@ -149,13 +191,23 @@ async function handleSearch() {
   loading.value = true
   searched.value = true
   try {
-    results.value = await searchKnowledge({
+    const params: Parameters<typeof searchKnowledge>[0] = {
       query: form.value.query.trim(),
       knowledgeIds: form.value.knowledgeIds,
       enableRerank: form.value.enableRerank,
-      confidence: form.value.confidence,
       limit: 10,
-    })
+    }
+
+    if (form.value.enableRerank) {
+      if (form.value.filterType === 'fixed') {
+        params.confidence = form.value.confidence
+      } else {
+        params.ratio = form.value.ratio
+        params.floor = form.value.floor
+      }
+    }
+
+    results.value = await searchKnowledge(params)
   } catch {
     results.value = []
   } finally {
@@ -181,6 +233,12 @@ function formatScore(score?: number): string {
 
 .recall-form {
   margin-bottom: 0;
+}
+
+.filter-radio-group {
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
 .recall-btn-col {

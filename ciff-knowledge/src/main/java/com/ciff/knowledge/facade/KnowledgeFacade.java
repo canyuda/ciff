@@ -18,17 +18,6 @@ public interface KnowledgeFacade {
     List<KnowledgeVO> listByIds(List<Long> ids);
 
     /**
-     * Retrieve relevant chunks for RAG.
-     * Full pipeline: embed → vector search → rerank → confidence filter.
-     *
-     * @param query        user query text
-     * @param knowledgeIds knowledge base IDs to search within
-     * @param topN         max results to return
-     * @return ranked chunks with relevance scores
-     */
-    List<KnowledgeChunkPO> retrieve(String query, List<Long> knowledgeIds, int topN);
-
-    /**
      * Retrieve relevant chunks for RAG with optional reranking.
      *
      * @param query        user query text

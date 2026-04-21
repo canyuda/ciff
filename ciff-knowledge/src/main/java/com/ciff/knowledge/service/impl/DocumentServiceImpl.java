@@ -13,6 +13,7 @@ import com.ciff.knowledge.mapper.DocumentMapper;
 import com.ciff.knowledge.mapper.KnowledgeMapper;
 import com.ciff.knowledge.service.DocumentService;
 import com.ciff.knowledge.service.FileStorage;
+import com.ciff.knowledge.service.KnowledgeChunkService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final KnowledgeMapper knowledgeMapper;
     private final FileStorage fileStorage;
     private final DocumentProcessingService documentProcessingService;
+    private final KnowledgeChunkService knowledgeChunkService;
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -106,6 +108,7 @@ public class DocumentServiceImpl implements DocumentService {
             fileStorage.delete(doc.getFilePath());
         }
 
+        knowledgeChunkService.deleteByDocumentId(documentId);
         documentMapper.deleteById(documentId);
     }
 
@@ -161,6 +164,10 @@ public class DocumentServiceImpl implements DocumentService {
 
         Page<DocumentPO> result = documentMapper.selectPage(pageParam, wrapper);
 
+        if (result.getRecords().isEmpty()) {
+            return PageResult.of(Collections.emptyList(), 0, (int) result.getCurrent(), (int) result.getSize());
+        }
+
         // Batch query knowledge names
         Set<Long> docKnowledgeIds = result.getRecords().stream()
                 .map(DocumentPO::getKnowledgeId)
@@ -172,6 +179,16 @@ public class DocumentServiceImpl implements DocumentService {
                 .map(doc -> toVO(doc, knowledgeNameMap.get(doc.getKnowledgeId())))
                 .toList();
         return PageResult.of(records, result.getTotal(), (int) result.getCurrent(), (int) result.getSize());
+    }
+
+    @Override
+    public Map<Long, String> getDocumentNamesByIds(List<Long> documentIds) {
+        if (documentIds == null || documentIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<DocumentPO> docs = documentMapper.selectBatchIds(documentIds);
+        return docs.stream()
+                .collect(Collectors.toMap(DocumentPO::getId, DocumentPO::getFileName, (a, b) -> a));
     }
 
     private void validateFile(MultipartFile file) {

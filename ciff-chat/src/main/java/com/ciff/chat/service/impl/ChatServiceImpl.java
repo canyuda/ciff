@@ -15,6 +15,7 @@ import com.ciff.common.exception.BizException;
 import com.ciff.common.http.LlmHttpClient;
 import com.ciff.knowledge.entity.KnowledgeChunkPO;
 import com.ciff.knowledge.facade.KnowledgeFacade;
+import com.ciff.knowledge.service.DocumentService;
 import com.ciff.mcp.dto.ToolVO;
 import com.ciff.mcp.facade.ToolFacade;
 import com.ciff.provider.dto.LlmCallConfig;
@@ -52,6 +53,7 @@ public class ChatServiceImpl implements ChatService {
     private final AgentKnowledgeService agentKnowledgeService;
     private final ProviderFacade providerFacade;
     private final KnowledgeFacade knowledgeFacade;
+    private final DocumentService documentService;
     private final ToolFacade toolFacade;
     private final LlmHttpClient llmHttpClient;
     private final ObjectMapper objectMapper;
@@ -77,7 +79,8 @@ public class ChatServiceImpl implements ChatService {
 
         List<ChatMessagePO> history = messageService.listByConversationId(conversation.getId());
         List<LlmMessage> messages = buildMessages(agent, history);
-        enhanceWithRag(agent, request.getMessage(), messages, request.getRagMode());
+        List<KnowledgeChunkPO> ragChunks = enhanceWithRag(agent, request.getMessage(), messages, request.getRagMode());
+        List<String> referenceDocs = extractReferenceDocuments(ragChunks);
 
         List<Map<String, Object>> tools = buildToolsDefinition(agent);
 
@@ -96,8 +99,9 @@ public class ChatServiceImpl implements ChatService {
         }
 
         int latencyMs = (int) (System.currentTimeMillis() - start);
+        List<Long> docIds = extractReferenceDocumentIds(ragChunks);
         ChatMessagePO assistantMsg = messageService.saveAssistantMessage(
-                conversation.getId(), finalContent, finalTokenUsage, llmConfig.getModelName(), latencyMs);
+                conversation.getId(), finalContent, finalTokenUsage, llmConfig.getModelName(), latencyMs, docIds);
 
         ChatResponse response = new ChatResponse();
         response.setConversationId(conversation.getId());
@@ -108,6 +112,7 @@ public class ChatServiceImpl implements ChatService {
         response.setTokenUsage(finalTokenUsage);
         response.setModelName(llmConfig.getModelName());
         response.setLatencyMs(latencyMs);
+        response.setReferenceDocuments(referenceDocs);
         return response;
     }
 
@@ -136,7 +141,8 @@ public class ChatServiceImpl implements ChatService {
 
                 List<ChatMessagePO> history = messageService.listByConversationId(conv.getId());
                 List<LlmMessage> messages = buildMessages(agent, history);
-                enhanceWithRag(agent, request.getMessage(), messages, request.getRagMode());
+                List<KnowledgeChunkPO> ragChunks = enhanceWithRag(agent, request.getMessage(), messages, request.getRagMode());
+                List<String> referenceDocs = extractReferenceDocuments(ragChunks);
 
                 String url = getChatEndpoint(llmConfig);
                 Map<String, String> headers = buildHeaders(llmConfig);
@@ -150,7 +156,7 @@ public class ChatServiceImpl implements ChatService {
                         String token = extractOpenAiToken(data);
                         if (token != null && !token.isEmpty()) {
                             fullContent.append(token);
-                            emitter.send(SseEmitter.event().name("token").data(token));
+                            emitter.send(SseEmitter.event().name("token").data(toJson(token)));
                         }
                     } catch (Exception e) {
                         throw new RuntimeException(e);
@@ -160,8 +166,9 @@ public class ChatServiceImpl implements ChatService {
                 String content = fullContent.toString();
                 int latencyMs = (int) (System.currentTimeMillis() - start);
                 TokenUsage tokenUsage = estimateTokenUsage(content);
+                List<Long> docIds = extractReferenceDocumentIds(ragChunks);
                 messageService.saveAssistantMessage(
-                        conv.getId(), content, tokenUsage, llmConfig.getModelName(), latencyMs);
+                        conv.getId(), content, tokenUsage, llmConfig.getModelName(), latencyMs, docIds);
 
                 emitter.send(SseEmitter.event().name("done").data(toJson(
                         SseDoneEvent.builder()
@@ -170,6 +177,7 @@ public class ChatServiceImpl implements ChatService {
                                         .completionTokens(tokenUsage.getCompletionTokens())
                                         .build())
                                 .latencyMs(latencyMs)
+                                .referenceDocuments(referenceDocs)
                                 .build())));
                 emitter.complete();
 
@@ -234,22 +242,22 @@ public class ChatServiceImpl implements ChatService {
 
     // ==================== RAG enhancement ====================
 
-    private void enhanceWithRag(AgentVO agent, String userMessage,
+    private List<KnowledgeChunkPO> enhanceWithRag(AgentVO agent, String userMessage,
                                 List<LlmMessage> messages, RagMode ragMode) {
         if (ragMode == RagMode.NO_RAG) {
-            return;
+            return List.of();
         }
 
         List<Long> knowledgeIds = agentKnowledgeService.listKnowledgeIds(agent.getId());
         if (knowledgeIds == null || knowledgeIds.isEmpty()) {
-            return;
+            return List.of();
         }
 
         try {
             List<KnowledgeChunkPO> chunks = knowledgeFacade.retrieve(
                     userMessage, knowledgeIds, RAG_TOP_N, ragMode == RagMode.RAG_WITH_RERANKER);
             if (chunks == null || chunks.isEmpty()) {
-                return;
+                return List.of();
             }
 
             String context = chunks.stream()
@@ -262,9 +270,36 @@ public class ChatServiceImpl implements ChatService {
             // Insert RAG context as a system message before the user messages
             messages.add(1, new LlmMessage.Text("system", ragPrompt));
 
+            return chunks;
+
         } catch (Exception e) {
             log.warn("RAG retrieval failed, falling back to direct chat: {}", e.getMessage());
+            return List.of();
         }
+    }
+
+    private List<Long> extractReferenceDocumentIds(List<KnowledgeChunkPO> chunks) {
+        if (chunks == null || chunks.isEmpty()) {
+            return List.of();
+        }
+        return chunks.stream()
+                .map(KnowledgeChunkPO::getDocumentId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private List<String> extractReferenceDocuments(List<KnowledgeChunkPO> chunks) {
+        List<Long> docIds = extractReferenceDocumentIds(chunks);
+        if (docIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, String> nameMap = documentService.getDocumentNamesByIds(docIds);
+        return docIds.stream()
+                .map(nameMap::get)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
     }
 
     // ==================== Tool calling ====================

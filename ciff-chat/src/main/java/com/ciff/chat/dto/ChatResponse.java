@@ -3,6 +3,8 @@ package com.ciff.chat.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Schema(description = "对话响应")
 public class ChatResponse {
@@ -30,4 +32,7 @@ public class ChatResponse {
 
     @Schema(description = "延迟(ms)")
     private Integer latencyMs;
+
+    @Schema(description = "RAG 参考文档名列表")
+    private List<String> referenceDocuments;
 }

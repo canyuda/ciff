@@ -61,7 +61,7 @@ const dialogTitle = computed(() => {
 
 function open(data?: Partial<T>) {
   formData.value = data ? { ...data } as T : ({} as T)
-  isEdit.value = !!data
+  isEdit.value = data ? !!(data as any).id : false
   visible.value = true
 }
 

@@ -35,6 +35,8 @@ export function searchKnowledge(params: {
   knowledgeIds: number[]
   enableRerank?: boolean
   confidence?: number
+  ratio?: number
+  floor?: number
   limit?: number
 }) {
   return get<SearchResultVO[]>('/v1/app/knowledge/search', params)

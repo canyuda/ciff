@@ -36,7 +36,7 @@
           <div
             class="sidebar__nav-item sidebar__nav-item--group"
             :class="{ 'sidebar__nav-item--active': isMenuActive(item.path) }"
-            @click="toggleMenu(item.path)"
+            @click="navigateAndToggle(item)"
           >
             <el-icon :size="18">
               <component :is="item.icon" />
@@ -92,7 +92,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   Setting,
 
@@ -113,6 +113,7 @@ interface MenuItem {
 }
 
 const route = useRoute()
+const router = useRouter()
 const collapsed = ref(false)
 const expandedMenus = ref<Set<string>>(new Set())
 
@@ -138,6 +139,11 @@ function toggleMenu(path: string) {
   } else {
     expandedMenus.value.add(path)
   }
+}
+
+function navigateAndToggle(item: MenuItem) {
+  router.push(item.path)
+  toggleMenu(item.path)
 }
 
 function isExpanded(path: string) {

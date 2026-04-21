@@ -44,11 +44,6 @@ public class KnowledgeFacadeImpl implements KnowledgeFacade {
     }
 
     @Override
-    public List<KnowledgeChunkPO> retrieve(String query, List<Long> knowledgeIds, int topN) {
-        return retrieve(query, knowledgeIds, topN, true);
-    }
-
-    @Override
     public List<KnowledgeChunkPO> retrieve(String query, List<Long> knowledgeIds, int topN, boolean useReranker) {
         // 1. Embed query
         float[] queryEmbedding = embeddingService.embed(List.of(query)).get(0);
@@ -79,8 +74,8 @@ public class KnowledgeFacadeImpl implements KnowledgeFacade {
         List<String> texts = candidates.stream().map(KnowledgeChunkPO::getContent).toList();
         List<RerankService.RerankEntry> reranked = rerankService.rerank(query, texts, topN);
 
-        // 4. Confidence filter
-        List<RerankService.RerankEntry> filtered = searchFilterService.filter(reranked);
+        // 4. Confidence filter (relative threshold to handle multi-query questions)
+        List<RerankService.RerankEntry> filtered = searchFilterService.filterRelative(reranked);
 
         // 5. Map back to chunks
         return filtered.stream()

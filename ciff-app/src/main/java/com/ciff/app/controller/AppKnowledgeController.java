@@ -179,7 +179,9 @@ public class AppKnowledgeController {
             @Parameter(description = "查询文本") @RequestParam String query,
             @Parameter(description = "知识库 ID 列表（至少1个，逗号分隔）") @RequestParam List<Long> knowledgeIds,
             @Parameter(description = "是否开启精排") @RequestParam(defaultValue = "true") boolean enableRerank,
-            @Parameter(description = "置信度过滤上限") @RequestParam(defaultValue = "0.3") double confidence,
+            @Parameter(description = "置信度过滤上限（固定分数模式）") @RequestParam(required = false) Double confidence,
+            @Parameter(description = "相对比率（分数比例模式）") @RequestParam(required = false) Double ratio,
+            @Parameter(description = "绝对最小分数（分数比例模式）") @RequestParam(required = false) Double floor,
             @Parameter(description = "返回条数") @RequestParam(defaultValue = "5") int limit) {
         if (query == null || query.isBlank()) {
             return Result.ok(List.of());
@@ -211,8 +213,18 @@ public class AppKnowledgeController {
             List<String> texts = candidates.stream().map(KnowledgeChunkPO::getContent).toList();
             List<RerankService.RerankEntry> reranked = rerankService.rerank(query, texts, limit);
 
-            // 3. Confidence filter (strict, no fallback)
-            List<RerankService.RerankEntry> filtered = searchFilterService.filterStrict(reranked, confidence);
+            // 3. Filter by selected mode
+            List<RerankService.RerankEntry> filtered;
+            if (ratio != null) {
+                // Relative ratio mode
+                double actualRatio = ratio;
+                double actualFloor = floor != null ? floor : 0.05;
+                filtered = searchFilterService.filterRelative(reranked, actualRatio, actualFloor);
+            } else {
+                // Fixed score mode (default)
+                double actualConfidence = confidence != null ? confidence : 0.3;
+                filtered = searchFilterService.filterStrict(reranked, actualConfidence);
+            }
 
             // 4. Map results
             results = filtered.stream()

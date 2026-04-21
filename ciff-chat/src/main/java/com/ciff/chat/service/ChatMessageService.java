@@ -12,7 +12,8 @@ public interface ChatMessageService {
     ChatMessagePO saveUserMessage(Long conversationId, String content);
 
     ChatMessagePO saveAssistantMessage(Long conversationId, String content,
-                                       TokenUsage tokenUsage, String modelName, int latencyMs);
+                                       TokenUsage tokenUsage, String modelName, int latencyMs,
+                                       java.util.List<Long> docIds);
 
     ChatMessagePO saveToolMessage(Long conversationId, String content, String toolCallId);
 

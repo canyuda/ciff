@@ -21,4 +21,16 @@ public class RerankProperties {
 
     /** Minimum relevance score threshold, chunks below this are filtered out */
     private double scoreThreshold = 0.3;
+
+    /**
+     * Relative threshold ratio.
+     * When using relative filtering, a chunk is kept if its score >= maxScore * ratio.
+     */
+    private double relativeRatio = 0.6;
+
+    /**
+     * Minimum absolute floor for relative filtering.
+     * Prevents keeping low scores when the top score itself is very low.
+     */
+    private double minAbsoluteFloor = 0.05;
 }

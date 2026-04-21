@@ -246,6 +246,7 @@ async function fetchAgents(params: PageParams) {
 
 function openCreateDialog() {
   dialogRef.value?.open({
+    type: 'chatbot',
     modelParams: { ...DEFAULT_MODEL_PARAMS },
   } as Partial<AgentForm>)
 }

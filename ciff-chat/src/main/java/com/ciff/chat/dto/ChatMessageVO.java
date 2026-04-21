@@ -30,6 +30,9 @@ public class ChatMessageVO {
     @Schema(description = "延迟(ms)")
     private Integer latencyMs;
 
+    @Schema(description = "参考文档列表")
+    private java.util.List<String> referenceDocuments;
+
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 }

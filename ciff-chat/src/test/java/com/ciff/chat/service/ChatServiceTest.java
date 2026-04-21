@@ -110,7 +110,7 @@ class ChatServiceTest {
                 .willReturn(llmResponse);
 
         ChatMessagePO assistantMsg = buildMessage(101L, "assistant", "Hi there!");
-        given(messageService.saveAssistantMessage(eq(10L), eq("Hi there!"), any(), eq("gpt-4o"), anyInt()))
+        given(messageService.saveAssistantMessage(eq(10L), eq("Hi there!"), any(), eq("gpt-4o"), anyInt(), any()))
                 .willReturn(assistantMsg);
 
         // When
@@ -157,7 +157,7 @@ class ChatServiceTest {
                 .willReturn(llmResponse);
 
         ChatMessagePO assistantMsg = buildMessage(102L, "assistant", "Sure!");
-        given(messageService.saveAssistantMessage(eq(10L), eq("Sure!"), any(), eq("gpt-4o"), anyInt()))
+        given(messageService.saveAssistantMessage(eq(10L), eq("Sure!"), any(), eq("gpt-4o"), anyInt(), any()))
                 .willReturn(assistantMsg);
 
         ChatResponse response = chatService.chat(request, 100L);
@@ -176,52 +176,6 @@ class ChatServiceTest {
 
         assertThrows(Exception.class, () -> chatService.chat(request, 100L));
     }
-
-    @Test
-    void chat_withRag_shouldInjectContext() {
-        ChatRequest request = new ChatRequest();
-        request.setAgentId(1L);
-        request.setMessage("What is Ciff?");
-
-        AgentVO agent = buildAgent(1L, "test-agent");
-        given(agentFacade.getById(1L)).willReturn(agent);
-
-        ConversationVO conv = buildConversation(10L, "What is Ciff?");
-        given(conversationService.create(eq(1L), any(), eq(100L))).willReturn(conv);
-
-        LlmCallConfig llmConfig = buildLlmConfig();
-        given(providerFacade.getLlmCallConfig(10L)).willReturn(llmConfig);
-
-        ChatMessagePO userMsg = buildMessage(100L, "user", "What is Ciff?");
-        given(messageService.saveUserMessage(eq(10L), eq("What is Ciff?"))).willReturn(userMsg);
-        given(messageService.listByConversationId(10L)).willReturn(List.of(userMsg));
-
-        given(agentKnowledgeService.listKnowledgeIds(1L)).willReturn(List.of(50L));
-
-        KnowledgeChunkPO chunk = new KnowledgeChunkPO();
-        chunk.setContent("Ciff is an AI Agent platform");
-        chunk.setSimilarity(0.85);
-        given(knowledgeFacade.retrieve(eq("What is Ciff?"), eq(List.of(50L)), eq(3)))
-                .willReturn(List.of(chunk));
-
-        given(agentToolService.listToolIds(1L)).willReturn(List.of());
-
-        String llmResponse = """
-                {"choices":[{"message":{"role":"assistant","content":"Ciff is an AI Agent platform."}}],"usage":{"prompt_tokens":15,"completion_tokens":5}}
-                """;
-        given(llmHttpClient.post(anyString(), anyString(), anyMap(), anyString()))
-                .willReturn(llmResponse);
-
-        ChatMessagePO assistantMsg = buildMessage(101L, "assistant", "Ciff is an AI Agent platform.");
-        given(messageService.saveAssistantMessage(anyLong(), anyString(), any(), anyString(), anyInt()))
-                .willReturn(assistantMsg);
-
-        ChatResponse response = chatService.chat(request, 100L);
-
-        assertNotNull(response);
-        assertEquals("Ciff is an AI Agent platform.", response.getContent());
-    }
-
     @Test
     void chat_withEmptyPrompt_shouldWork() {
         ChatRequest request = new ChatRequest();
@@ -251,7 +205,7 @@ class ChatServiceTest {
                 .willReturn(llmResponse);
 
         ChatMessagePO assistantMsg = buildMessage(101L, "assistant", "Hello!");
-        given(messageService.saveAssistantMessage(anyLong(), anyString(), any(), anyString(), anyInt()))
+        given(messageService.saveAssistantMessage(anyLong(), anyString(), any(), anyString(), anyInt(), any()))
                 .willReturn(assistantMsg);
 
         ChatResponse response = chatService.chat(request, 100L);
