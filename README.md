@@ -42,6 +42,8 @@ ciff/
 
 ## 产品展示
 
+### 页面一览
+
 <table>
   <tr>
     <td align="center"><b>供应商管理</b></td>
@@ -74,6 +76,35 @@ ciff/
   <tr>
     <td><img src="image/recall-test.png" alt="召回测试" width="100%"></td>
     <td><img src="image/chat.png" alt="对话页面" width="100%"></td>
+  </tr>
+</table>
+
+### 弹窗/表单
+
+<table>
+  <tr>
+    <td align="center"><b>新增供应商</b></td>
+    <td align="center"><b>新增工具</b></td>
+  </tr>
+  <tr>
+    <td><img src="image/provider-create.png" alt="新增供应商" width="100%"></td>
+    <td><img src="image/tool-create.png" alt="新增工具" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>创建知识库</b></td>
+    <td align="center"><b>创建 Agent</b></td>
+  </tr>
+  <tr>
+    <td><img src="image/knowledge-create.png" alt="创建知识库" width="100%"></td>
+    <td><img src="image/agent-create.png" alt="创建 Agent" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>选择 Agent（对话）</b></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><img src="image/chat-agent-selector.png" alt="选择 Agent" width="100%"></td>
+    <td></td>
   </tr>
 </table>
 
@@ -113,7 +144,7 @@ ciff/
 - [x] 本地文件存储 + TXT 固定长度分块
 - [x] 缓存层支持（Provider / Agent 详情缓存）
 
-### Phase 4: 前端界面 (2026-04-17 ~ 进行中)
+### Phase 4: 前端界面 (2026-04-17 ~ 2026-04-21)
 
 - [x] 前端工程初始化（Vue 3 + TypeScript + Element Plus + Vite）
 - [x] 设计系统与公共组件库（CiffTable / CiffFormDialog / PageHeader / TopBar）
@@ -121,12 +152,11 @@ ciff/
 - [x] 模型管理页面
 - [x] 工具管理页面
 - [x] Agent 管理页面
-- [ ] Chat 对话页面（基础框架已有）
+- [x] Chat 对话页面（会话列表 + SSE 流式 + 消息历史 + RAG 模式切换）
 
 ### 待开发
 
 - [ ] Workflow 引擎（JSON 配置，线性步骤 + 条件分支）
-- [ ] Chat 对话引擎（顶层编排，串联 Agent / 知识库 / 工具）
-- [ ] 知识库 RAG 检索集成（向量查询接入对话链路）
+- [ ] API Key 外部发布
 - [ ] Docker Compose 部署
 - [ ] Nginx 反向代理 + SSE 透传配置

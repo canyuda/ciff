@@ -27,8 +27,8 @@
 | 4.3 SSE 流式对话 | 完成 | `AppChatController.streamChat()` → `SseEmitter` |
 | 4.4 Agent 工具调用（单轮） | 完成 | `ChatServiceImpl.handleToolCall()` |
 | 4.5 RAG 增强 | 完成 | `ChatServiceImpl.enhanceWithRag()` |
-| 4.6 前端对话页面 | 未开发 | ChatView.vue 为占位页面，无 API 层 |
-| 4.7 前端 SSE 流式 | 未开发 | 无 EventSource/fetch stream 消费逻辑 |
+| 4.6 前端对话页面 | 完成 | ChatView.vue：左侧会话列表 + 消息气泡 + 输入框 + Agent 选择 + RAG 模式切换 |
+| 4.7 前端 SSE 流式 | 完成 | fetch + ReadableStream 消费，打字机效果，停止生成按钮 |
 | ProviderFacade LLM 配置 | 完成 | `getLlmCallConfig()` 支持 OpenAI + Claude 格式 |
 
 ---
