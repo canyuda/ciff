@@ -14,17 +14,10 @@
 | Phase 0 | 完成 | UserContext / Flyway / 枚举 / 双数据源就绪 |
 | Phase 1 | 完成 | `mvn test -pl ciff-provider,ciff-common` 全部通过 |
 | Phase 2 | 完成 | `mvn test -pl ciff-agent,ciff-mcp,ciff-app` 全部通过 |
-| Phase 3 | **未完成** | 知识库 CRUD 未开发，PGVector 未接入 |
+| Phase 3 | 完成 | 知识库 CRUD + PGVector 向量检索已就绪 |
 | Phase 4 | 完成 | Chat 对话引擎（后端+前端+测试）全部完成 |
 
-> **⚠️ 重要风险**：Phase 3（知识库）未完成。Phase 5.2 工作流执行引擎的前置依赖包含 Phase 3.3（PGVector 向量检索）。
->
-> **影响范围**：工作流步骤类型中的 `knowledge_retrieval`（知识库检索）无法完整实现，因为缺少 embedding 生成和向量检索能力。
->
-> **建议方案**：
-> 1. **方案 A（推荐）**：Phase 5 先实现 `llm` / `tool` / `condition` 三种步骤类型，`knowledge_retrieval` 步骤类型标记为 TODO，等 Phase 3 完成后补齐。
-> 2. **方案 B**：先完成 Phase 3，再启动 Phase 5。
-> 3. **方案 C**：Phase 5 中 `knowledge_retrieval` 降级为基于 MySQL `t_knowledge_document` 的全文检索（精确匹配），不做语义检索。
+> **✅ 前置依赖已就绪**：Phase 3（知识库）已完成，PGVector 向量检索已接入。Phase 5 工作流可完整实现 `llm` / `tool` / `condition` / `knowledge_retrieval` 四种步骤类型。
 
 ---
 
@@ -59,6 +52,7 @@ ciff-workflow/src/main/java/com/ciff/workflow/
   engine/step/LlmStepExecutor.java
   engine/step/ToolStepExecutor.java
   engine/step/ConditionStepExecutor.java
+  engine/step/KnowledgeRetrievalStepExecutor.java
   engine/dto/StepDefinition.java
   engine/dto/ConditionRule.java
   engine/dto/WorkflowExecutionResult.java
@@ -129,6 +123,7 @@ public class StepDefinition {
     @NotBlank private String name;
     private Map<String, Object> config;    // 步骤配置（根据 type 变化）
     private List<String> dependsOn;        // 依赖的前序步骤 id
+    private String nextStepId;             // 执行完毕后跳转的下一步（null 表示按 steps 顺序或结束）
     private Map<String, String> outputs;   // 输出变量映射
 }
 
@@ -149,8 +144,9 @@ public class ConditionRule {
 - `name` 非空且唯一（同一 user_id 下）
 - `definition.steps` 非空
 - 每个 step 必须有 `id` 和 `type`
-- step `type` 必须是允许的枚举值（`llm`, `tool`, `condition`；V1 暂不支持 `knowledge_retrieval`）
+- step `type` 必须是允许的枚举值（`llm`, `tool`, `condition`, `knowledge_retrieval`）
 - step `id` 在整个 steps 列表中唯一
+- `nextStepId`（如非 null）必须指向 steps 中已存在的 step `id`
 
 ---
 
@@ -161,6 +157,7 @@ public class ConditionRule {
 | Task | 实现工作流 JSON 解析 + 按序执行 + 上下文变量传递 + 条件分支 |
 | Output | `WorkflowEngine` 及各类 `StepExecutor` |
 | Verification | `WorkflowEngineTest` / `WorkflowConditionTest` / `WorkflowExecutionTest` 通过 |
+| 驱动用例 | [`plan/fixtures/weather-workflow-test.json`](fixtures/weather-workflow-test.json) — 引擎实现必须能正确执行此 JSON 定义的工作流 |
 
 **引擎架构**：
 
@@ -171,7 +168,7 @@ WorkflowEngine.execute(definition, inputs)
     │
     ├──→ 2. 初始化 WorkflowContext（存储变量）
     │
-    ├──→ 3. 按序遍历步骤
+    ├──→ 3. 从入口步骤开始，按 nextStepId / rules 依次执行
     │       │
     │       ├──→ llm 步骤 → LlmStepExecutor
     │       │              ├──→ 组装 prompt（支持变量插值 ${stepId.output.xxx}）
@@ -183,10 +180,15 @@ WorkflowEngine.execute(definition, inputs)
     │       │              ├──→ 调用 ToolService 执行
     │       │              └──→ 将结果写入 context
     │       │
-    │       └──→ condition 步骤 → ConditionStepExecutor
+    │       ├──→ condition 步骤 → ConditionStepExecutor
     │                      ├──→ 获取判断字段值（从 context）
     │                      ├──→ 按规则顺序匹配（eq / contains / gt / default）
     │                      └──→ 返回命中规则的 nextStepId
+	       │
+	       └──→ knowledge_retrieval 步骤 → KnowledgeRetrievalStepExecutor
+	                              ├──→ 解析检索参数（变量插值）
+	                              ├──→ 调用 KnowledgeService 向量检索
+	                              └──→ 将检索结果写入 context
     │
     └──→ 4. 返回 WorkflowExecutionResult（每步骤输出 + 整体结果）
 ```
@@ -196,6 +198,12 @@ WorkflowEngine.execute(definition, inputs)
 - `${inputs.xxx}` — 引用全局输入变量
 - 支持字符串模板：`"请将以下内容翻译：${step1.output.text}"`
 
+**步骤流转规则**：
+- 引擎从 `steps` 列表第一个无 `dependsOn` 的步骤开始执行
+- 普通步骤（llm / tool / knowledge_retrieval）执行完毕后，读取自身 `nextStepId` 跳转；`nextStepId` 为 null 表示工作流结束
+- `condition` 步骤不使用自身 `nextStepId`，而是根据 `rules` 匹配结果跳转到对应规则的 `nextStepId`
+- 如果 `nextStepId` 指向的步骤不存在，抛出 `InvalidWorkflowDefinitionException`
+
 **步骤类型配置示例**：
 
 ```json
@@ -204,6 +212,7 @@ WorkflowEngine.execute(definition, inputs)
   "id": "translate",
   "type": "llm",
   "name": "翻译",
+  "nextStepId": "output_result",
   "config": {
     "modelId": 1,
     "systemPrompt": "你是一个翻译助手",
@@ -217,6 +226,7 @@ WorkflowEngine.execute(definition, inputs)
   "id": "weather",
   "type": "tool",
   "name": "查询天气",
+  "nextStepId": "generate_reply",
   "config": {
     "toolId": 3,
     "params": { "city": "${inputs.city}" }
@@ -224,7 +234,7 @@ WorkflowEngine.execute(definition, inputs)
   "outputs": { "result": "weatherInfo" }
 }
 
-// condition 步骤
+// condition 步骤（condition 不设 nextStepId，由 rules 决定跳转）
 {
   "id": "check_sentiment",
   "type": "condition",
@@ -237,6 +247,20 @@ WorkflowEngine.execute(definition, inputs)
       { "operator": "default", "nextStepId": "neutral_reply" }
     ]
   }
+}
+
+// knowledge_retrieval 步骤
+{
+  "id": "retrieve_docs",
+  "type": "knowledge_retrieval",
+  "name": "知识库检索",
+  "nextStepId": "generate_answer",
+  "config": {
+    "knowledgeBaseId": 1,
+    "query": "${inputs.question}",
+    "topK": 3
+  },
+  "outputs": { "result": "retrievedDocs" }
 }
 ```
 
@@ -323,6 +347,7 @@ WorkflowList.vue
 1. 简单 2 步骤：LLM 翻译 → 输出结果
 2. 条件分支：LLM 情感分析 → condition（positive/negative/neutral）→ 不同回复
 3. 工具调用：LLM 提取城市名 → 天气工具查询 → LLM 生成回复
+4. **必须通过**：[`weather-workflow-test.json`](fixtures/weather-workflow-test.json) 天气查询工作流（覆盖 llm + tool + condition + nextStepId 流转 + 变量插值）
 
 ---
 
@@ -367,7 +392,7 @@ Step 1 (Workflow CRUD)
 
 | 决策 | 选择 | 原因 |
 |------|------|------|
-| 步骤类型 | `llm` / `tool` / `condition` | V1 范围，`knowledge_retrieval` 等 Phase 3 完成后扩展 |
+| 步骤类型 | `llm` / `tool` / `condition` / `knowledge_retrieval` | Phase 3 已完成，四种步骤类型全部支持 |
 | 工作流定义格式 | JSON（非 YAML） | 前端可直接用 JSON 编辑器，前后端解析成本低 |
 | 执行方式 | 同步执行（非异步 Job） | V1 工作流为短流程（< 15s），同步更可控 |
 | 变量引用语法 | `${stepId.output.field}` | 显式、可读、易于解析 |
@@ -381,7 +406,6 @@ Step 1 (Workflow CRUD)
 
 | 风险 | 影响 | 降级方案 |
 |------|------|----------|
-| Phase 3 未完成，缺少 knowledge_retrieval | 工作流步骤类型不完整 | 标记为 TODO，V1 只支持 llm/tool/condition |
 | 工作流步骤过多导致执行超时 | 用户体验差 | 引擎层面设置最大步骤数（如 20 步）和总超时（60s） |
 | JSON 编辑器对用户不友好 | 配置门槛高 | 提供 3 个示例模板（翻译/分类/工具链），用户可复制修改 |
 | 变量插值语法错误 | 执行失败 | 引擎执行前校验所有 `${}` 引用是否合法，前置拦截 |
@@ -390,29 +414,39 @@ Step 1 (Workflow CRUD)
 
 ---
 
-## 八、Phase 3 依赖处理建议
+## 八、knowledge_retrieval 步骤设计
 
-如果用户选择**方案 A**（推荐）：在 Phase 5 执行期间，`knowledge_retrieval` 步骤类型相关代码不实现，但预留扩展点：
+Phase 3 已完成，`knowledge_retrieval` 步骤类型可直接实现：
 
-1. `StepType` 枚举中不定义 `KNOWLEDGE_RETRIEVAL`，校验器拒绝该类型
-2. `WorkflowEngine` 中 `StepExecutor` 为接口模式，后续新增 `KnowledgeRetrievalStepExecutor` 即可扩展
-3. 前端 JSON 编辑器中不提示 `knowledge_retrieval` 类型，但在文档中标注"即将支持"
-
-等 Phase 3 完成后，只需：
-- 在 `StepType` 枚举中增加 `KNOWLEDGE_RETRIEVAL`
-- 新增 `KnowledgeRetrievalStepExecutor` 实现
-- 前端更新类型提示
-
-无需改动引擎核心逻辑。
+**KnowledgeRetrievalStepExecutor**：
+- `config.knowledgeBaseId`：引用知识库 ID（聚合层校验存在性）
+- `config.query`：检索查询文本，支持变量插值
+- `config.topK`：返回 Top-K 结果（默认 3）
+- 调用 `KnowledgeService` 的向量检索接口，返回匹配文档片段
+- 检索结果写入 context，供后续 LLM 步骤引用
 
 ---
 
-## 九、完成总结（待执行后填写）
+## 九、完成总结
 
-**计划完成日期**: 待定
+**完成日期**: 2026-04-23
 
 **交付内容**:
-- `ciff-workflow`: Workflow CRUD + 执行引擎（llm / tool / condition）
-- `ciff-app`: AppWorkflowController 聚合接口
-- `ciff-web`: WorkflowList.vue + JSON 编辑器 + 执行弹窗
-- 测试: 9 个后端测试 + 1 个前端测试
+
+| 模块 | 交付 | 说明 |
+|------|------|------|
+| `ciff-workflow` | Workflow CRUD + 执行引擎 | 四种步骤类型: llm / tool / condition / knowledge_retrieval |
+| `ciff-app` | AppWorkflowController 聚合接口 | 创建/更新时校验 modelId、toolId 外键引用 |
+| `ciff-web` | WorkflowList.vue | 列表 + JSON 编辑器 + 执行弹窗（动态输入参数 + 结果展示） |
+| 测试 | 9 个后端测试 + 1 个前端测试 | 全部通过 |
+
+**关键实现细节**:
+
+- **步骤流转**: `nextStepId` 显式顺序控制，condition 步骤由 rules 匹配结果决定跳转
+- **变量插值**: `${stepId.output.xxx}` 和 `${inputs.xxx}` 语法，WorkflowContext 统一解析
+- **循环检测**: DFS 算法检测步骤依赖图中的环
+- **工具参数校验**: ToolStepExecutor 根据 param_schema 校验 required 字段 + 类型强转（number/integer/boolean/array）
+- **最终输出**: 仅返回最后一个成功步骤的输出（finalOutputs）
+- **执行上限**: 最大 20 步，防无限循环
+
+**联调验证**: `weather-workflow-test.json` 天气查询工作流通过（覆盖 llm + tool + condition + nextStepId + 变量插值）

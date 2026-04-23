@@ -103,6 +103,7 @@ import {
   Fold,
   Expand,
   ArrowDown,
+  Share,
 } from '@element-plus/icons-vue'
 
 interface MenuItem {
@@ -130,6 +131,7 @@ const menuItems: MenuItem[] = [
     ],
   },
   { path: '/agent', label: 'Agent 管理', icon: User },
+  { path: '/workflow', label: '工作流管理', icon: Share },
   { path: '/chat', label: '对话', icon: ChatDotRound },
 ]
 

@@ -156,7 +156,17 @@ ciff/
 
 ### 待开发
 
-- [ ] Workflow 引擎（JSON 配置，线性步骤 + 条件分支）
+### Phase 5: Workflow 工作流 (2026-04-22 ~ 2026-04-23)
+
+- [x] Workflow CRUD + JSON 定义校验（步骤类型 / ID 唯一 / nextStepId 引用 / DFS 循环检测）
+- [x] 工作流执行引擎（llm / tool / condition / knowledge_retrieval 四种步骤类型）
+- [x] 变量插值 `${stepId.output.xxx}` / `${inputs.xxx}` + WorkflowContext
+- [x] 工具参数校验（param_schema required + 类型强转）
+- [x] 工作流管理前端页面（列表 + JSON 编辑器 + 执行弹窗 + 动态输入参数）
+- [x] 9 个后端测试 + 1 个前端测试全部通过
+
+### 待开发
+
 - [ ] API Key 外部发布
 - [ ] Docker Compose 部署
 - [ ] Nginx 反向代理 + SSE 透传配置
