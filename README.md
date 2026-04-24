@@ -100,11 +100,35 @@ ciff/
   </tr>
   <tr>
     <td align="center"><b>选择 Agent（对话）</b></td>
-    <td></td>
+    <td align="center"><b>编辑工作流（JSON）</b></td>
   </tr>
   <tr>
     <td><img src="image/chat-agent-selector.png" alt="选择 Agent" width="100%"></td>
-    <td></td>
+    <td><img src="image/edit_workflow.png" alt="编辑工作流 JSON" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>编辑工作流（流程图）</b></td>
+    <td align="center"><b>执行工作流 — 任务已提交</b></td>
+  </tr>
+  <tr>
+    <td><img src="image/edit_workflow_2.png" alt="编辑工作流 流程图" width="100%"></td>
+    <td><img src="image/handle_workflow.png" alt="执行工作流" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>任务详情 — 步骤执行</b></td>
+    <td align="center"><b>任务详情 — 最终结果</b></td>
+  </tr>
+  <tr>
+    <td><img src="image/handle_workflow_2.png" alt="任务详情 步骤执行" width="100%"></td>
+    <td><img src="image/handle_workflow_3.png" alt="任务详情 最终结果" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>任务详情 — 执行失败</b></td>
+    <td align="center"><b>历史任务列表</b></td>
+  </tr>
+  <tr>
+    <td><img src="image/error_handle_workflow.png" alt="执行失败" width="100%"></td>
+    <td><img src="image/history_workflow.png" alt="历史任务" width="100%"></td>
   </tr>
 </table>
 
