@@ -7,6 +7,7 @@ import com.ciff.workflow.dto.WorkflowCreateRequest;
 import com.ciff.workflow.dto.WorkflowUpdateRequest;
 import com.ciff.workflow.dto.WorkflowVO;
 import com.ciff.workflow.engine.dto.WorkflowExecutionResult;
+import com.ciff.workflow.engine.dto.WorkflowTask;
 import com.ciff.workflow.service.WorkflowService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -64,10 +65,10 @@ public class WorkflowController {
     }
 
     @PostMapping("/{id}/execute")
-    @Operation(summary = "Execute workflow")
-    public Result<WorkflowExecutionResult> execute(
+    @Operation(summary = "Submit workflow execution (async)")
+    public Result<WorkflowTask> execute(
             @Parameter(description = "Workflow ID") @PathVariable Long id,
             @RequestBody(required = false) Map<String, Object> inputs) {
-        return Result.ok(workflowService.execute(id, inputs, UserContext.getUserId()));
+        return Result.ok(workflowService.submit(id, inputs, UserContext.getUserId()));
     }
 }

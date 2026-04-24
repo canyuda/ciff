@@ -10,7 +10,8 @@ import com.ciff.mcp.service.ToolService;
 import com.ciff.provider.dto.ModelVO;
 import com.ciff.provider.facade.ProviderFacade;
 import com.ciff.workflow.dto.*;
-import com.ciff.workflow.engine.dto.WorkflowExecutionResult;
+import com.ciff.workflow.engine.dto.WorkflowTask;
+import com.ciff.workflow.engine.dto.WorkflowTaskDetail;
 import com.ciff.workflow.service.WorkflowService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -19,6 +20,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -74,11 +76,26 @@ public class AppWorkflowController {
     }
 
     @PostMapping("/{id}/execute")
-    @Operation(summary = "执行工作流")
-    public Result<WorkflowExecutionResult> execute(
+    @Operation(summary = "提交工作流执行（异步）")
+    public Result<WorkflowTask> execute(
             @Parameter(description = "Workflow ID") @PathVariable Long id,
             @RequestBody(required = false) Map<String, Object> inputs) {
-        return Result.ok(workflowService.execute(id, inputs, UserContext.getUserId()));
+        return Result.ok(workflowService.submit(id, inputs, UserContext.getUserId()));
+    }
+
+    @GetMapping("/{id}/tasks")
+    @Operation(summary = "查询工作流任务列表")
+    public Result<List<WorkflowTask>> getTaskList(
+            @Parameter(description = "Workflow ID") @PathVariable Long id) {
+        return Result.ok(workflowService.getTaskList(id, UserContext.getUserId()));
+    }
+
+    @GetMapping("/{id}/tasks/{taskId}")
+    @Operation(summary = "查询任务详情")
+    public Result<WorkflowTaskDetail> getTaskDetail(
+            @Parameter(description = "Workflow ID") @PathVariable Long id,
+            @Parameter(description = "Task ID") @PathVariable String taskId) {
+        return Result.ok(workflowService.getTaskDetail(id, taskId, UserContext.getUserId()));
     }
 
     private void validateDefinitionRefs(WorkflowDefinition definition) {

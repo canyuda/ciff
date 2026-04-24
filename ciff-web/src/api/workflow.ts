@@ -44,7 +44,7 @@ export interface WorkflowUpdateRequest {
 export interface WorkflowExecutionResult {
   success: boolean
   error?: string
-  stepResults?: Record<string, StepResult>
+  stepResults?: StepResult[]
   finalOutputs?: Record<string, unknown>
 }
 
@@ -55,6 +55,37 @@ export interface StepResult {
   success: boolean
   error?: string
   outputs?: Record<string, unknown>
+}
+
+export type TaskStatus = 'STARTED' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'TIMEOUT'
+
+export interface WorkflowTask {
+  taskId: string
+  workflowId: number
+  userId: number
+  status: TaskStatus
+  currentStepId?: string
+  currentStepName?: string
+  completedSteps: number
+  totalSteps: number
+  startTime: string
+  endTime?: string
+}
+
+export interface WorkflowTaskDetail {
+  taskId: string
+  workflowId: number
+  status: TaskStatus
+  currentStepId?: string
+  currentStepName?: string
+  completedSteps: number
+  totalSteps: number
+  inputs?: Record<string, unknown>
+  stepResults?: StepResult[]
+  finalOutputs?: Record<string, unknown>
+  error?: string
+  startTime: string
+  endTime?: string
 }
 
 export function getWorkflows(params: {
@@ -81,6 +112,14 @@ export function deleteWorkflow(id: number) {
   return del(`/v1/app/workflows/${id}`)
 }
 
-export function executeWorkflow(id: number, inputs?: Record<string, unknown>) {
-  return post<WorkflowExecutionResult>(`/v1/app/workflows/${id}/execute`, inputs ?? {})
+export function submitWorkflow(id: number, inputs?: Record<string, unknown>) {
+  return post<WorkflowTask>(`/v1/app/workflows/${id}/execute`, inputs ?? {})
+}
+
+export function getWorkflowTasks(workflowId: number) {
+  return get<WorkflowTask[]>(`/v1/app/workflows/${workflowId}/tasks`)
+}
+
+export function getWorkflowTaskDetail(workflowId: number, taskId: string) {
+  return get<WorkflowTaskDetail>(`/v1/app/workflows/${workflowId}/tasks/${taskId}`)
 }

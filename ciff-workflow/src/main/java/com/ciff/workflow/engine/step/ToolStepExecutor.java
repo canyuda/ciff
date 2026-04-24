@@ -73,7 +73,11 @@ public class ToolStepExecutor implements StepExecutor {
             Map<String, Object> resultData = objectMapper.readValue(
                     responseBody, new TypeReference<HashMap<String, Object>>() {});
 
-            Map<String, Object> mappedOutputs = mapOutputs(resultData, step.getOutputs());
+            // expose "result" pointing to full response (for output mapping like {"result": "weatherData"})
+            Map<String, Object> sourceOutputs = new HashMap<>(resultData);
+            sourceOutputs.put("result", new HashMap<>(resultData));
+
+            Map<String, Object> mappedOutputs = mapOutputs(sourceOutputs, step.getOutputs());
 
             return StepResult.builder()
                     .stepId(step.getId())
@@ -99,7 +103,8 @@ public class ToolStepExecutor implements StepExecutor {
         if (outputMapping == null || outputMapping.isEmpty()) {
             return Map.of("result", outputs);
         }
-        Map<String, Object> mapped = new HashMap<>();
+        // preserve original keys so inter-step references still work
+        Map<String, Object> mapped = new HashMap<>(outputs);
         for (Map.Entry<String, String> entry : outputMapping.entrySet()) {
             Object value = outputs.get(entry.getKey());
             mapped.put(entry.getValue(), value);

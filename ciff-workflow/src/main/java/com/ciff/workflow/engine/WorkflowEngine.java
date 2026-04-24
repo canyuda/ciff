@@ -23,7 +23,6 @@ public class WorkflowEngine {
 
     public WorkflowEngine(List<StepExecutor> executorList) {
         this.executors = new HashMap<>();
-        // Map executor by converting class name: LlmStepExecutor -> llm, ToolStepExecutor -> tool, etc.
         for (StepExecutor executor : executorList) {
             String beanName = executor.getClass().getSimpleName();
             String type = beanName.replace("StepExecutor", "").toLowerCase();
@@ -32,6 +31,11 @@ public class WorkflowEngine {
     }
 
     public WorkflowExecutionResult execute(WorkflowDefinition definition, Map<String, Object> inputs) {
+        return execute(definition, inputs, null);
+    }
+
+    public WorkflowExecutionResult execute(WorkflowDefinition definition, Map<String, Object> inputs,
+                                           StepCallback callback) {
         if (definition == null || definition.getSteps() == null || definition.getSteps().isEmpty()) {
             throw new InvalidWorkflowDefinitionException("Definition steps cannot be empty");
         }
@@ -39,14 +43,14 @@ public class WorkflowEngine {
         Map<String, StepDefinition> stepMap = definition.getSteps().stream()
                 .collect(Collectors.toMap(StepDefinition::getId, Function.identity()));
 
-        // find entry step: first step with no dependsOn
         StepDefinition entry = definition.getSteps().stream()
                 .filter(s -> s.getDependsOn() == null || s.getDependsOn().isEmpty())
                 .findFirst()
                 .orElseThrow(() -> new InvalidWorkflowDefinitionException("No entry step found"));
 
+        int totalSteps = definition.getSteps().size();
         WorkflowContext context = new WorkflowContext(inputs);
-        Map<String, StepResult> stepResults = new LinkedHashMap<>();
+        List<StepResult> stepResults = new ArrayList<>();
 
         StepDefinition current = entry;
         StepResult lastSuccessfulResult = null;
@@ -57,24 +61,32 @@ public class WorkflowEngine {
             StepExecutor executor = executors.get(current.getType());
             if (executor == null) {
                 log.error("No executor for step type: {}", current.getType());
-                stepResults.put(current.getId(), StepResult.builder()
+                StepResult errorResult = StepResult.builder()
                         .stepId(current.getId())
                         .stepName(current.getName())
                         .type(current.getType())
                         .success(false)
                         .error("Unknown step type: " + current.getType())
-                        .build());
+                        .build();
+                stepResults.add(errorResult);
                 break;
             }
 
             StepResult result = executor.execute(current, context);
-            stepResults.put(current.getId(), result);
+            stepResults.add(result);
             context.setStepOutput(current.getId(), result.getOutputs());
 
             if (result.isSuccess()) {
                 lastSuccessfulResult = result;
             } else {
                 log.warn("Step {} failed: {}", current.getId(), result.getError());
+            }
+
+            if (callback != null) {
+                callback.onStepComplete(current, result, stepResults, totalSteps);
+            }
+
+            if (!result.isSuccess()) {
                 break;
             }
 
@@ -85,21 +97,19 @@ public class WorkflowEngine {
             log.warn("Workflow exceeded max steps limit: {}", MAX_STEPS);
         }
 
-        // final result: output of the last successful step
         Map<String, Object> finalOutputs = new HashMap<>();
         if (lastSuccessfulResult != null && lastSuccessfulResult.getOutputs() != null) {
             finalOutputs.putAll(lastSuccessfulResult.getOutputs());
         }
 
         return WorkflowExecutionResult.builder()
-                .success(stepResults.values().stream().allMatch(StepResult::isSuccess))
+                .success(stepResults.stream().allMatch(StepResult::isSuccess))
                 .stepResults(stepResults)
                 .finalOutputs(finalOutputs)
                 .build();
     }
 
     private StepDefinition resolveNextStep(StepDefinition current, StepResult result, Map<String, StepDefinition> stepMap) {
-        // condition step: next step determined by rule matching result
         if ("condition".equals(current.getType())) {
             Map<String, Object> outputs = result.getOutputs();
             if (outputs != null && outputs.containsKey("_nextStepId")) {
@@ -109,9 +119,13 @@ public class WorkflowEngine {
             return null;
         }
 
-        // normal step: use nextStepId
         String nextStepId = current.getNextStepId();
         return nextStepId != null ? stepMap.get(nextStepId) : null;
     }
 
+    @FunctionalInterface
+    public interface StepCallback {
+        void onStepComplete(StepDefinition step, StepResult result,
+                            List<StepResult> allResults, int totalSteps);
+    }
 }

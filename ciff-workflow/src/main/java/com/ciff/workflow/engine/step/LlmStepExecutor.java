@@ -48,13 +48,15 @@ public class LlmStepExecutor implements StepExecutor {
             String responseBody = llmHttpClient.post(llmConfig.getProviderName(), url, headers, requestBody);
             Map<String, Object> response = objectMapper.readValue(responseBody, new TypeReference<>() {});
 
-            Map<String, Object> outputs = new HashMap<>();
-            // try to parse content as JSON (structured output)
             String content = extractContent(response);
+
+            Map<String, Object> outputs = new HashMap<>();
             outputs.put("rawContent", content);
             parseStructuredOutput(content, outputs);
 
-            // map outputs according to step config
+            // expose "result" as alias for rawContent (for output mapping like {"result": "finalReply"})
+            outputs.put("result", content);
+
             Map<String, Object> mappedOutputs = mapOutputs(outputs, step.getOutputs());
 
             return StepResult.builder()
@@ -118,7 +120,8 @@ public class LlmStepExecutor implements StepExecutor {
         if (outputMapping == null || outputMapping.isEmpty()) {
             return Map.of("result", outputs);
         }
-        Map<String, Object> mapped = new HashMap<>();
+        // preserve original keys so inter-step references still work
+        Map<String, Object> mapped = new HashMap<>(outputs);
         for (Map.Entry<String, String> entry : outputMapping.entrySet()) {
             Object value = outputs.get(entry.getKey());
             mapped.put(entry.getValue(), value);

@@ -6,28 +6,50 @@ import com.ciff.common.constant.ErrorCode;
 import com.ciff.common.dto.PageResult;
 import com.ciff.common.exception.BizException;
 import com.ciff.common.util.PageHelper;
+import com.ciff.common.util.RedisUtil;
 import com.ciff.workflow.convertor.WorkflowConvertor;
 import com.ciff.workflow.dto.*;
-import com.ciff.workflow.entity.WorkflowPO;
 import com.ciff.workflow.engine.WorkflowEngine;
+import com.ciff.workflow.engine.WorkflowRedisKeys;
 import com.ciff.workflow.engine.dto.WorkflowExecutionResult;
+import com.ciff.workflow.engine.dto.WorkflowTask;
+import com.ciff.workflow.engine.dto.WorkflowTaskDetail;
+import com.ciff.workflow.engine.dto.WorkflowExecutionResult.StepResult;
+import com.ciff.workflow.entity.WorkflowPO;
 import com.ciff.workflow.exception.InvalidWorkflowDefinitionException;
 import com.ciff.workflow.mapper.WorkflowMapper;
 import com.ciff.workflow.service.WorkflowService;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
-@RequiredArgsConstructor
 public class WorkflowServiceImpl implements WorkflowService {
 
     private static final Set<String> VALID_STEP_TYPES = Set.of("llm", "tool", "condition", "knowledge_retrieval");
+    private static final long TASK_TTL_HOURS = 24;
 
     private final WorkflowMapper workflowMapper;
     private final WorkflowEngine workflowEngine;
+    private final RedisUtil redisUtil;
+    private final WorkflowService self;
+
+    public WorkflowServiceImpl(WorkflowMapper workflowMapper,
+                               WorkflowEngine workflowEngine,
+                               RedisUtil redisUtil,
+                               @Lazy WorkflowService self) {
+        this.workflowMapper = workflowMapper;
+        this.workflowEngine = workflowEngine;
+        this.redisUtil = redisUtil;
+        this.self = self;
+    }
 
     @Override
     public WorkflowVO create(WorkflowCreateRequest request, Long userId) {
@@ -83,9 +105,172 @@ public class WorkflowServiceImpl implements WorkflowService {
     }
 
     @Override
-    public WorkflowExecutionResult execute(Long id, Map<String, Object> inputs, Long userId) {
+    public WorkflowTask submit(Long id, Map<String, Object> inputs, Long userId) {
         WorkflowPO po = requireExists(id, userId);
-        return workflowEngine.execute(po.getDefinition(), inputs);
+
+        String taskId = UUID.randomUUID().toString().replace("-", "");
+        int totalSteps = po.getDefinition().getSteps().size();
+
+        WorkflowTask task = WorkflowTask.builder()
+                .taskId(taskId)
+                .workflowId(id)
+                .userId(userId)
+                .status(WorkflowTask.TaskStatus.STARTED)
+                .totalSteps(totalSteps)
+                .completedSteps(0)
+                .inputs(inputs != null ? inputs : Map.of())
+                .startTime(LocalDateTime.now())
+                .build();
+
+        // push task summary to Redis List
+        String listKey = WorkflowRedisKeys.taskListKey(userId, id);
+        redisUtil.listPushWithTtl(listKey, task, TASK_TTL_HOURS, TimeUnit.HOURS);
+
+        // create task detail as Redis String
+        WorkflowTaskDetail detail = WorkflowTaskDetail.builder()
+                .taskId(taskId)
+                .workflowId(id)
+                .status(WorkflowTask.TaskStatus.STARTED)
+                .totalSteps(totalSteps)
+                .completedSteps(0)
+                .inputs(inputs != null ? inputs : Map.of())
+                .stepResults(new ArrayList<>())
+                .startTime(LocalDateTime.now().toString())
+                .build();
+        String detailKey = WorkflowRedisKeys.taskDetailKey(userId, id, taskId);
+        redisUtil.set(detailKey, detail, TASK_TTL_HOURS, TimeUnit.HOURS);
+
+        // async execution via proxy to ensure @Async works
+        self.doExecuteAsync(po.getDefinition(), inputs, userId, id, taskId);
+
+        return task;
+    }
+
+    @Override
+    public List<WorkflowTask> getTaskList(Long workflowId, Long userId) {
+        String listKey = WorkflowRedisKeys.taskListKey(userId, workflowId);
+        List<WorkflowTask> tasks = redisUtil.listRange(listKey);
+        if (tasks == null) return List.of();
+        // newest first
+        List<WorkflowTask> result = new ArrayList<>(tasks);
+        Collections.reverse(result);
+        return result;
+    }
+
+    @Override
+    public WorkflowTaskDetail getTaskDetail(Long workflowId, String taskId, Long userId) {
+        String detailKey = WorkflowRedisKeys.taskDetailKey(userId, workflowId, taskId);
+        WorkflowTaskDetail detail = redisUtil.get(detailKey);
+        if (detail == null) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "Task not found: " + taskId);
+        }
+        return detail;
+    }
+
+    @Async
+    public void doExecuteAsync(WorkflowDefinition definition, Map<String, Object> inputs,
+                               Long userId, Long workflowId, String taskId) {
+        String listKey = WorkflowRedisKeys.taskListKey(userId, workflowId);
+        String detailKey = WorkflowRedisKeys.taskDetailKey(userId, workflowId, taskId);
+
+        try {
+            updateStatus(listKey, detailKey, taskId, WorkflowTask.TaskStatus.RUNNING, null);
+
+            WorkflowExecutionResult result = workflowEngine.execute(definition, inputs, (step, stepResult, allResults, totalSteps) -> {
+                int completed = allResults.size();
+
+                // update task in list
+                WorkflowTask task = findTaskInList(listKey, taskId);
+                if (task != null) {
+                    task.setStatus(WorkflowTask.TaskStatus.RUNNING);
+                    task.setCurrentStepId(step.getId());
+                    task.setCurrentStepName(step.getName());
+                    task.setCompletedSteps(completed);
+                    updateTaskInList(listKey, taskId, task);
+                }
+
+                // update task detail
+                WorkflowTaskDetail detail = redisUtil.get(detailKey);
+                if (detail != null) {
+                    detail.setStatus(WorkflowTask.TaskStatus.RUNNING);
+                    detail.setCurrentStepId(step.getId());
+                    detail.setCurrentStepName(step.getName());
+                    detail.setCompletedSteps(completed);
+                    detail.setStepResults(new ArrayList<>(allResults));
+                    redisUtil.set(detailKey, detail, TASK_TTL_HOURS, TimeUnit.HOURS);
+                }
+            });
+
+            WorkflowTask.TaskStatus finalStatus = result.isSuccess()
+                    ? WorkflowTask.TaskStatus.SUCCESS : WorkflowTask.TaskStatus.FAILED;
+            String error = result.isSuccess() ? null : result.getStepResults().stream()
+                    .filter(r -> !r.isSuccess())
+                    .map(StepResult::getError)
+                    .findFirst().orElse(null);
+
+            updateStatus(listKey, detailKey, taskId, finalStatus, error);
+
+            // update detail with final outputs
+            WorkflowTaskDetail detail = redisUtil.get(detailKey);
+            if (detail != null) {
+                detail.setFinalOutputs(result.getFinalOutputs());
+                detail.setStepResults(result.getStepResults());
+                detail.setEndTime(LocalDateTime.now().toString());
+                redisUtil.set(detailKey, detail, TASK_TTL_HOURS, TimeUnit.HOURS);
+            }
+
+        } catch (Exception e) {
+            log.error("Workflow async execution failed, taskId={}", taskId, e);
+            updateStatus(listKey, detailKey, taskId, WorkflowTask.TaskStatus.FAILED, e.getMessage());
+        }
+    }
+
+    private void updateStatus(String listKey, String detailKey, String taskId,
+                              WorkflowTask.TaskStatus status, String error) {
+        // update task in list
+        WorkflowTask task = findTaskInList(listKey, taskId);
+        if (task != null) {
+            task.setStatus(status);
+            task.setEndTime(isTerminalStatus(status) ? LocalDateTime.now() : null);
+            updateTaskInList(listKey, taskId, task);
+        }
+
+        // update detail
+        WorkflowTaskDetail detail = redisUtil.get(detailKey);
+        if (detail != null) {
+            detail.setStatus(status);
+            if (error != null) detail.setError(error);
+            if (isTerminalStatus(status)) detail.setEndTime(LocalDateTime.now().toString());
+            redisUtil.set(detailKey, detail, TASK_TTL_HOURS, TimeUnit.HOURS);
+        }
+    }
+
+    private boolean isTerminalStatus(WorkflowTask.TaskStatus status) {
+        return status == WorkflowTask.TaskStatus.SUCCESS
+                || status == WorkflowTask.TaskStatus.FAILED
+                || status == WorkflowTask.TaskStatus.TIMEOUT;
+    }
+
+    private WorkflowTask findTaskInList(String listKey, String taskId) {
+        List<WorkflowTask> tasks = redisUtil.listRange(listKey);
+        if (tasks == null) return null;
+        for (int i = 0; i < tasks.size(); i++) {
+            if (taskId.equals(tasks.get(i).getTaskId())) {
+                return tasks.get(i);
+            }
+        }
+        return null;
+    }
+
+    private void updateTaskInList(String listKey, String taskId, WorkflowTask updated) {
+        List<WorkflowTask> tasks = redisUtil.listRange(listKey);
+        if (tasks == null) return;
+        for (int i = 0; i < tasks.size(); i++) {
+            if (taskId.equals(tasks.get(i).getTaskId())) {
+                redisUtil.listUpdateEntry(listKey, i, updated);
+                return;
+            }
+        }
     }
 
     private WorkflowPO requireExists(Long id, Long userId) {
@@ -118,7 +303,6 @@ public class WorkflowServiceImpl implements WorkflowService {
 
         List<StepDefinition> steps = definition.getSteps();
 
-        // step id uniqueness
         Set<String> ids = new HashSet<>();
         for (StepDefinition step : steps) {
             if (!ids.add(step.getId())) {
@@ -127,15 +311,12 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
 
         for (StepDefinition step : steps) {
-            // step type validation
             if (!VALID_STEP_TYPES.contains(step.getType())) {
                 throw new InvalidWorkflowDefinitionException("Invalid step type: " + step.getType());
             }
-            // nextStepId must reference existing step
             if (step.getNextStepId() != null && !ids.contains(step.getNextStepId())) {
                 throw new InvalidWorkflowDefinitionException("nextStepId references non-existent step: " + step.getNextStepId());
             }
-            // dependsOn must reference existing steps
             if (step.getDependsOn() != null) {
                 for (String dep : step.getDependsOn()) {
                     if (!ids.contains(dep)) {
@@ -145,7 +326,6 @@ public class WorkflowServiceImpl implements WorkflowService {
             }
         }
 
-        // cycle detection via DFS
         detectCycle(steps);
     }
 

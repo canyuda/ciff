@@ -1,119 +1,153 @@
 {
-  "name": "天气查询工作流",
-  "description": "输入地名 → 判断地名 → 查天气 → 晴天推荐景点/非晴天推荐穿衣",
-  "definition": {
-    "inputs": {
-      "userInput": {
-        "type": "string",
-        "required": true,
-        "description": "用户输入的地名"
+  "steps": [
+    {
+      "id": "judge_place",
+      "type": "llm",
+      "name": "判断是否为地名并提取经纬度",
+      "config": {
+        "modelId": 57,
+        "userPrompt": "请判断以下输入是否为地名，如果是请提取经纬度：${inputs.userInput}",
+        "systemPrompt": "你是地理信息提取助手。判断用户输入是否为有效地名。\n如果是地名，返回JSON：{\"isPlaceName\":true,\"longitude\":数值,\"latitude\":数值,\"placeName\":\"地名\"}\n如果不是地名，返回：{\"isPlaceName\":false}\n只返回JSON，不要其他内容。"
+      },
+      "dependsOn": null,
+      "nextStepId": "branch_place",
+      "outputs": {
+        "latitude": "latitude",
+        "longitude": "longitude",
+        "placeName": "placeName",
+        "isPlaceName": "isPlaceName"
       }
     },
-    "steps": [
-      {
-        "id": "judge_place",
-        "type": "llm",
-        "name": "判断是否为地名并提取经纬度",
-        "nextStepId": "branch_place",
-        "config": {
-          "modelId": 1,
-          "systemPrompt": "你是地理信息提取助手。判断用户输入是否为有效地名。\n如果是地名，返回JSON：{\"isPlaceName\":true,\"longitude\":数值,\"latitude\":数值,\"placeName\":\"地名\"}\n如果不是地名，返回：{\"isPlaceName\":false}\n只返回JSON，不要其他内容。",
-          "userPrompt": "请判断以下输入是否为地名，如果是请提取经纬度：${inputs.userInput}"
-        },
-        "outputs": {
-          "isPlaceName": "isPlaceName",
-          "longitude": "longitude",
-          "latitude": "latitude",
-          "placeName": "placeName"
-        }
-      },
-      {
-        "id": "branch_place",
-        "type": "condition",
-        "name": "地名判断分支",
-        "config": {
-          "field": "${judge_place.output.isPlaceName}",
-          "rules": [
-            { "operator": "eq", "value": true, "nextStepId": "get_weather" },
-            { "operator": "default", "nextStepId": "not_place_msg" }
-          ]
-        }
-      },
-      {
-        "id": "not_place_msg",
-        "type": "llm",
-        "name": "告知非地名",
-        "config": {
-          "modelId": 1,
-          "systemPrompt": "你是友好的助手，简洁回复。",
-          "userPrompt": "用户的输入「${inputs.userInput}」无法识别为地名，请告知用户并建议重新输入。"
-        },
-        "outputs": { "result": "finalReply" }
-      },
-      {
-        "id": "get_weather",
-        "type": "tool",
-        "name": "查询天气",
-        "nextStepId": "judge_weather",
-        "config": {
-          "toolId": 3,
-          "params": {
-            "longitude": "${judge_place.output.longitude}",
-            "latitude": "${judge_place.output.latitude}"
+    {
+      "id": "branch_place",
+      "type": "condition",
+      "name": "地名判断分支",
+      "config": {
+        "field": "${judge_place.output.isPlaceName}",
+        "rules": [
+          {
+            "value": true,
+            "operator": "eq",
+            "nextStepId": "get_weather"
+          },
+          {
+            "operator": "default",
+            "nextStepId": "not_place_msg"
           }
-        },
-        "outputs": { "result": "weatherData" }
+        ]
       },
-      {
-        "id": "judge_weather",
-        "type": "llm",
-        "name": "判断天气类型",
-        "nextStepId": "branch_weather",
-        "config": {
-          "modelId": 1,
-          "systemPrompt": "你是天气分析助手。根据天气数据判断天气状况。\n返回JSON：{\"isSunny\":布尔值,\"weatherType\":\"天气描述\",\"temperature\":\"温度\"}\n晴、多云视为晴天(isSunny=true)；阴、雨、雪等视为非晴天(isSunny=false)。\n只返回JSON。",
-          "userPrompt": "分析以下天气数据：${get_weather.output.result}"
-        },
-        "outputs": {
-          "isSunny": "isSunny",
-          "weatherType": "weatherType",
-          "temperature": "temperature"
-        }
+      "dependsOn": null,
+      "nextStepId": null,
+      "outputs": null
+    },
+    {
+      "id": "not_place_msg",
+      "type": "llm",
+      "name": "告知非地名",
+      "config": {
+        "modelId": 57,
+        "userPrompt": "用户的输入「${inputs.userInput}」无法识别为地名，请告知用户并建议重新输入。",
+        "systemPrompt": "你是友好的助手，简洁回复。"
       },
-      {
-        "id": "branch_weather",
-        "type": "condition",
-        "name": "天气类型分支",
-        "config": {
-          "field": "${judge_weather.output.isSunny}",
-          "rules": [
-            { "operator": "eq", "value": true, "nextStepId": "sunny_spots" },
-            { "operator": "default", "nextStepId": "clothing_advice" }
-          ]
-        }
-      },
-      {
-        "id": "sunny_spots",
-        "type": "llm",
-        "name": "推荐特色景点",
-        "config": {
-          "modelId": 1,
-          "systemPrompt": "你是旅游推荐助手，推荐3-5个当地特色景点，每个景点附简短介绍。",
-          "userPrompt": "地点：${judge_place.output.placeName}，天气：${judge_weather.output.weatherType}，温度：${judge_weather.output.temperature}。请推荐适合晴天游览的特色景点。"
-        },
-        "outputs": { "result": "finalReply" }
-      },
-      {
-        "id": "clothing_advice",
-        "type": "llm",
-        "name": "穿衣推荐",
-        "config": {
-          "modelId": 1,
-          "systemPrompt": "你是生活助手，根据天气给出实用的穿衣建议，考虑温度和天气类型。",
-          "userPrompt": "地点：${judge_place.output.placeName}，天气：${judge_weather.output.weatherType}，温度：${judge_weather.output.temperature}。请给出穿衣推荐。"
-        },
-        "outputs": { "result": "finalReply" }
+      "dependsOn": null,
+      "nextStepId": null,
+      "outputs": {
+        "result": "finalReply"
       }
-    ]
+    },
+    {
+      "id": "get_weather",
+      "type": "tool",
+      "name": "查询天气",
+      "config": {
+        "params": {
+          "latitude": "${judge_place.output.latitude}",
+          "longitude": "${judge_place.output.longitude}",
+          "current_weather": true
+        },
+        "toolId": 1
+      },
+      "dependsOn": null,
+      "nextStepId": "judge_weather",
+      "outputs": {
+        "result": "weatherData"
+      }
+    },
+    {
+      "id": "judge_weather",
+      "type": "llm",
+      "name": "判断天气类型",
+      "config": {
+        "modelId": 57,
+        "userPrompt": "分析以下天气数据：${get_weather.output.result}",
+        "systemPrompt": "你是天气分析助手。根据天气数据判断天气状况。\n返回JSON：{\"isSunny\":布尔值,\"weatherType\":\"天气描述\",\"temperature\":\"温度\"}\n晴、多云视为晴天(isSunny=true)；阴、雨、雪等视为非晴天(isSunny=false)。\n只返回JSON。"
+      },
+      "dependsOn": null,
+      "nextStepId": "branch_weather",
+      "outputs": {
+        "isSunny": "isSunny",
+        "temperature": "temperature",
+        "weatherType": "weatherType"
+      }
+    },
+    {
+      "id": "branch_weather",
+      "type": "condition",
+      "name": "天气类型分支",
+      "config": {
+        "field": "${judge_weather.output.isSunny}",
+        "rules": [
+          {
+            "value": true,
+            "operator": "eq",
+            "nextStepId": "sunny_spots"
+          },
+          {
+            "operator": "default",
+            "nextStepId": "clothing_advice"
+          }
+        ]
+      },
+      "dependsOn": null,
+      "nextStepId": null,
+      "outputs": null
+    },
+    {
+      "id": "sunny_spots",
+      "type": "llm",
+      "name": "推荐特色景点",
+      "config": {
+        "modelId": 57,
+        "userPrompt": "地点：${judge_place.output.placeName}，天气：${judge_weather.output.weatherType}，温度：${judge_weather.output.temperature}。请推荐适合晴天游览的特色景点。",
+        "systemPrompt": "你是旅游推荐助手，推荐3-5个当地特色景点，每个景点附简短介绍。"
+      },
+      "dependsOn": null,
+      "nextStepId": null,
+      "outputs": {
+        "result": "finalReply"
+      }
+    },
+    {
+      "id": "clothing_advice",
+      "type": "llm",
+      "name": "穿衣推荐",
+      "config": {
+        "modelId": 57,
+        "userPrompt": "地点：${judge_place.output.placeName}，天气：${judge_weather.output.weatherType}，温度：${judge_weather.output.temperature}。请给出穿衣推荐。",
+        "systemPrompt": "你是生活助手，根据天气给出实用的穿衣建议，考虑温度和天气类型。"
+      },
+      "dependsOn": null,
+      "nextStepId": null,
+      "outputs": {
+        "result": "rawContent"
+      }
+    }
+  ],
+  "inputs": {
+    "userInput": {
+      "type": "string",
+      "required": true,
+      "description": "用户输入的地名"
+    }
   }
 }

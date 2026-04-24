@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -14,7 +15,7 @@ import java.util.Map;
 public class WorkflowExecutionResult {
     private boolean success;
     private String error;
-    private Map<String, StepResult> stepResults;
+    private List<StepResult> stepResults;
     private Map<String, Object> finalOutputs;
 
     @Data
