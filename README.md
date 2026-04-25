@@ -189,8 +189,13 @@ ciff/
 - [x] 工作流管理前端页面（列表 + JSON 编辑器 + 执行弹窗 + 动态输入参数）
 - [x] 9 个后端测试 + 1 个前端测试全部通过
 
-### 待开发
+### Phase 6: 认证 + API 发布 + 部署 (2026-04-25)
 
-- [ ] API Key 外部发布
-- [ ] Docker Compose 部署
-- [ ] Nginx 反向代理 + SSE 透传配置
+- [x] Sa-Token + JWT 认证（登录 / 注册 / 登出 / Token Redis 持久化）
+- [x] GitHub OAuth 2.0 自动注册登录
+- [x] API Key 管理（生成 / 列表 / 撤销 / SHA256 哈希存储）
+- [x] 外部对话接口（API Key 认证，`/api/v1/external/chat`）
+- [x] 前端登录页 + 路由守卫 + Token 管理
+- [x] API Key 管理页面
+- [x] Docker Compose 部署（ciff-app + Nginx 反向代理 + SSE 透传）
+- [x] 全局 UI 打磨（空状态、错误提示、响应式侧边栏）
