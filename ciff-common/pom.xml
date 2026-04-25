@@ -83,6 +83,22 @@
             <artifactId>resilience4j-circuitbreaker</artifactId>
         </dependency>
 
+        <!-- Sa-Token (lightweight auth framework) -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-spring-boot3-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-jwt</artifactId>
+        </dependency>
+
+        <!-- BCrypt password hashing -->
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+        </dependency>
+
         <!-- Netty DNS resolver for macOS (Apple Silicon) -->
         <dependency>
             <groupId>io.netty</groupId>

@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
+import { getToken, removeToken } from '@/utils/auth'
 
 const instance = axios.create({
   baseURL: '/api',
@@ -8,8 +9,10 @@ const instance = axios.create({
 })
 
 instance.interceptors.request.use((config) => {
-  // Temporary: hard-coded user ID until auth module is built
-  config.headers['X-User-Id'] = '1'
+  const token = getToken()
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
   return config
 })
 
@@ -24,7 +27,29 @@ instance.interceptors.response.use(
     return Promise.reject(new Error(msg))
   },
   (error) => {
-    const msg = error.response?.data?.message || error.message || 'Network error'
+    const status = error.response?.status
+    if (status === 401) {
+      removeToken()
+      const currentPath = window.location.pathname
+      if (currentPath !== '/login') {
+        ElMessage.warning('Session expired, please sign in again')
+        window.location.href = '/login'
+      }
+      return Promise.reject(error)
+    }
+    if (status === 403) {
+      ElMessage.error('Permission denied')
+      return Promise.reject(error)
+    }
+    if (status === 404) {
+      ElMessage.error('Resource not found')
+      return Promise.reject(error)
+    }
+    if (!error.response) {
+      ElMessage.error('Network error, please check your connection')
+      return Promise.reject(error)
+    }
+    const msg = error.response.data?.message || 'Server error, please try again'
     ElMessage.error(msg)
     return Promise.reject(error)
   },

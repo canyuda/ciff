@@ -308,9 +308,11 @@ async function handleDelete(id?: number) {
 }
 
 async function handleRebuild(row: DocumentVO) {
-  if (!row.id || !row.knowledgeId) return
+  const docId = row.id
+  const knowledgeId = row.knowledgeId
+  if (!docId || !knowledgeId) return
   await confirm('确定要重建该文档的向量索引吗？', async () => {
-    await rebuildVectors(row.knowledgeId, { documentId: row.id })
+    await rebuildVectors(knowledgeId, { documentId: docId })
   })
   notifySuccess('已触发重建')
   tableRef.value?.refresh()

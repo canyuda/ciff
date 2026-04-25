@@ -166,7 +166,6 @@ import {
   updateAgent,
   deleteAgent,
   DEFAULT_MODEL_PARAMS,
-  type AgentVO,
   type AgentCreateRequest,
   type AgentUpdateRequest,
   type AgentModelParam,

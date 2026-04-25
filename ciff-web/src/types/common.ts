@@ -19,4 +19,5 @@ export interface TableColumn {
   slot?: string
   align?: 'left' | 'center' | 'right'
   fixed?: 'left' | 'right' | boolean
+  showOverflowTooltip?: boolean
 }

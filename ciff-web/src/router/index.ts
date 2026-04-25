@@ -1,8 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isAuthenticated } from '@/utils/auth'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/auth/LoginView.vue'),
+      meta: { public: true },
+    },
     {
       path: '/',
       redirect: '/provider',
@@ -47,7 +54,20 @@ const router = createRouter({
       name: 'workflow',
       component: () => import('@/views/workflow/WorkflowList.vue'),
     },
+    {
+      path: '/api-keys',
+      name: 'api-keys',
+      component: () => import('@/views/apikey/ApiKeyList.vue'),
+    },
   ],
+})
+
+router.beforeEach((to, _from, next) => {
+  if (to.meta.public || isAuthenticated()) {
+    next()
+  } else {
+    next({ path: '/login', query: { redirect: to.fullPath } })
+  }
 })
 
 export default router

@@ -121,7 +121,7 @@ export function deleteDocument(documentId: number) {
 }
 
 export function updateDocument(documentId: number, fileName: string) {
-  return put<DocumentVO>(`/v1/app/knowledge/documents/${documentId}`, null, { params: { fileName } })
+  return put<DocumentVO>(`/v1/app/knowledge/documents/${documentId}`, undefined, { params: { fileName } })
 }
 
 export function processDocument(documentId: number) {
@@ -136,5 +136,5 @@ export function rebuildVectors(
   knowledgeId: number,
   params?: { documentId?: number; chunkSize?: number; overlap?: number }
 ) {
-  return post(`/v1/app/knowledge/${knowledgeId}/rebuild`, null, { params })
+  return post(`/v1/app/knowledge/${knowledgeId}/rebuild`, undefined, { params })
 }

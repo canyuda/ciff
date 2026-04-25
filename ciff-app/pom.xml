@@ -39,6 +39,12 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-mysql</artifactId>
         </dependency>
+
+        <!-- Sa-Token Redis (token persistence) -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-redis-jackson</artifactId>
+        </dependency>
         <!-- SpringDoc OpenAPI + Swagger UI -->
         <dependency>
             <groupId>org.springdoc</groupId>

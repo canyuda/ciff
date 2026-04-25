@@ -104,6 +104,7 @@ import {
   Expand,
   ArrowDown,
   Share,
+  Key,
 } from '@element-plus/icons-vue'
 
 interface MenuItem {
@@ -133,6 +134,7 @@ const menuItems: MenuItem[] = [
   { path: '/agent', label: 'Agent 管理', icon: User },
   { path: '/workflow', label: '工作流管理', icon: Share },
   { path: '/chat', label: '对话', icon: ChatDotRound },
+  { path: '/api-keys', label: 'API Key', icon: Key },
 ]
 
 function toggleMenu(path: string) {

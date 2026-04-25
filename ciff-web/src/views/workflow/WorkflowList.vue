@@ -32,7 +32,7 @@
       :rules="rules"
       :submit-handler="handleSubmit"
     >
-      <template #default="{ data, isEdit }">
+      <template #default="{ data, isEdit: _isEdit }">
         <el-form-item label="名称" prop="name">
           <el-input v-model="data.name" placeholder="工作流名称" />
         </el-form-item>
@@ -200,7 +200,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { Plus, Loading } from '@element-plus/icons-vue'
 import CiffTable from '@/components/CiffTable.vue'
 import CiffFormDialog from '@/components/CiffFormDialog.vue'
@@ -219,7 +219,7 @@ import {
   getWorkflowTaskDetail,
 } from '@/api/workflow'
 import type { TableColumn, PageParams } from '@/types/common'
-import type { FormRules, FormItemRule } from 'element-plus'
+import type { FormRules } from 'element-plus'
 import type { WorkflowVO, StepResult, WorkflowTask, WorkflowTaskDetail, TaskStatus, WorkflowDefinition } from '@/api/workflow'
 import mermaid from 'mermaid'
 
@@ -289,7 +289,6 @@ async function fetchWorkflows(params: PageParams) {
 }
 
 // mermaid rendering
-const mermaidContainerRef = ref<HTMLElement | null>(null)
 const mermaidSvg = ref('')
 
 async function renderMermaid(jsonStr: string): Promise<boolean> {
@@ -416,7 +415,7 @@ const executeInputFields = computed<InputField[]>(() => {
 
 function openExecuteDialog(row: WorkflowVO) {
   currentWorkflowId.value = row.id ?? null
-  currentWorkflowDef.value = (row.definition as Record<string, unknown>) ?? null
+  currentWorkflowDef.value = (row.definition as unknown as Record<string, unknown>) ?? null
   executeInputValues.value = {}
   submittedTask.value = null
   submitting.value = false
@@ -477,9 +476,7 @@ async function openTaskDetailDialog(task: WorkflowTask) {
   taskDetailVisible.value = true
   await loadTaskDetail(task.taskId)
   // auto-enable refresh for running tasks
-  if (taskDetail.value && (taskDetail.value.status === 'STARTED' || taskDetail.value.status === 'RUNNING')) {
-    autoRefresh.value = true
-  }
+  autoRefresh.value = isTaskRunning.value
 }
 
 async function loadTaskDetail(taskId: string) {

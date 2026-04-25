@@ -124,7 +124,7 @@
       :rules="modelRules"
       :submit-handler="handleModelSubmit"
     >
-      <template #default="{ data, isEdit }">
+      <template #default="{ data, isEdit: _isEdit }">
         <el-form-item label="供应商" prop="providerId">
           <el-select v-model="data.providerId" placeholder="请选择供应商" style="width: 100%" disabled>
             <el-option :label="currentProvider?.name" :value="currentProvider?.id" />

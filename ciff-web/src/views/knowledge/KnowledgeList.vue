@@ -217,7 +217,7 @@ async function openEditDialog(id?: number) {
     name: detail.name,
     description: detail.description,
     chunkSize: detail.chunkSize,
-    embeddingModel: detail.embeddingModel,
+    embeddingModel: detail.embeddingModel ?? '',
   }
   dialogRef.value?.open(formData)
 }

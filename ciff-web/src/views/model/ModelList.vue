@@ -76,7 +76,6 @@ import {
   createModel,
   updateModel,
   deleteModel,
-  type ModelVO,
   type ModelCreateRequest,
   type ModelUpdateRequest,
 } from '@/api/model'

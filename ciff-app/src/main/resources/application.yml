@@ -50,9 +50,30 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
+sa-token:
+  token-name: Authorization
+  token-prefix: Bearer
+  timeout: ${SA_TOKEN_TIMEOUT:86400}
+  active-timeout: ${SA_TOKEN_ACTIVE_TIMEOUT:1800}
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: false
+  jwt-secret-key: ${SA_TOKEN_JWT_SECRET_KEY:ciff-default-jwt-secret-change-in-production}
+
+github:
+  oauth:
+    client-id: ${GITHUB_CLIENT_ID:}
+    client-secret: ${GITHUB_CLIENT_SECRET:}
+    redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:8080/api/auth/github/callback}
+
 ciff:
   security:
     api-key-secret: ${CIFF_API_KEY_SECRET:}
+  admin:
+    default-username: ${CIFF_ADMIN_USERNAME:admin}
+    default-password: ${CIFF_ADMIN_PASSWORD:admin123}
+  frontend-url: ${CIFF_FRONTEND_URL:http://localhost:5173}
   upload:
     path: ${CIFF_UPLOAD_PATH:./uploads}
   llm:

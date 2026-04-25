@@ -2,32 +2,43 @@
   <header class="topbar">
     <!-- Breadcrumb -->
     <el-breadcrumb separator="/">
-      <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+      <el-breadcrumb-item :to="{ path: '/' }">Home</el-breadcrumb-item>
       <el-breadcrumb-item v-if="currentLabel">{{ currentLabel }}</el-breadcrumb-item>
     </el-breadcrumb>
 
     <!-- User -->
     <div class="topbar__user">
-      <el-avatar :size="28" class="topbar__avatar">A</el-avatar>
-      <span class="topbar__username">Admin</span>
+      <el-avatar :size="28" class="topbar__avatar">
+        {{ userInitial }}
+      </el-avatar>
+      <span class="topbar__username">{{ username }}</span>
+      <el-button text size="small" @click="handleLogout">
+        <el-icon><SwitchButton /></el-icon>
+      </el-button>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { SwitchButton } from '@element-plus/icons-vue'
+import { getUser, removeToken } from '@/utils/auth'
+import { logout } from '@/api/auth'
 
 const route = useRoute()
+const router = useRouter()
 
 const breadcrumbMap: Record<string, string> = {
-  '/provider': '供应商管理',
-  '/tool': '工具管理',
-  '/knowledge': '知识库管理',
-  '/knowledge-documents': '文档管理',
-  '/recall-test': '召回测试',
-  '/agent': 'Agent 管理',
-  '/chat': '对话',
+  '/provider': 'Providers',
+  '/tool': 'Tools',
+  '/knowledge': 'Knowledge',
+  '/knowledge-documents': 'Documents',
+  '/recall-test': 'Recall Test',
+  '/agent': 'Agents',
+  '/chat': 'Chat',
+  '/workflow': 'Workflows',
+  '/api-keys': 'API Key',
 }
 
 const currentLabel = computed(() => {
@@ -41,6 +52,20 @@ const currentLabel = computed(() => {
   }
   return ''
 })
+
+const currentUser = computed(() => getUser())
+const username = computed(() => currentUser.value?.username || 'User')
+const userInitial = computed(() => username.value.charAt(0).toUpperCase())
+
+async function handleLogout() {
+  try {
+    await logout()
+  } catch {
+    // ignore
+  }
+  removeToken()
+  router.push('/login')
+}
 </script>
 
 <style scoped>
