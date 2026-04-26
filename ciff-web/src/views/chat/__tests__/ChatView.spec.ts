@@ -420,11 +420,11 @@ describe('ChatView', () => {
 
   // --- RAG mode ---
 
-  it('should have default RAG mode as RAG_WITH_RERANKER', async () => {
+  it('should have default RAG mode as NO_RAG', async () => {
     const wrapper = await createWrapper()
     const vm = wrapper.vm as any
 
-    expect(vm.ragMode).toBe('RAG_WITH_RERANKER')
+    expect(vm.ragMode).toBe('NO_RAG')
   })
 
   // --- Empty state ---

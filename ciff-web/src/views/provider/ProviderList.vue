@@ -294,12 +294,12 @@ const modelFormDialogRef = ref<ModelFormDialogRef | null>(null)
 
 const columns: TableColumn[] = [
   { label: '名称', prop: 'name', minWidth: 160 },
-  { label: '类型', slot: 'type', width: 110, align: 'center' },
+  { label: '类型', slot: 'type', width: 130, align: 'center' },
   { label: '认证方式', slot: 'authType', width: 140, align: 'center' },
   { label: 'Base URL', prop: 'apiBaseUrl', minWidth: 240 },
-  { label: '状态', slot: 'status', width: 80, align: 'center' },
+  { label: '状态', slot: 'status', width: 100, align: 'center' },
   { label: '健康状态', slot: 'health', width: 130, align: 'center' },
-  { label: '模型数', slot: 'modelCount', width: 80, align: 'center' },
+  { label: '模型数', slot: 'modelCount', width: 110, align: 'center' },
   { label: '创建时间', prop: 'createTime', width: 170 },
   { label: '操作', slot: 'actions', minWidth: 240, fixed: 'right' },
 ]
@@ -308,7 +308,7 @@ const modelColumns: TableColumn[] = [
   { label: '模型名称', prop: 'name', minWidth: 140 },
   { label: '显示名称', prop: 'displayName', minWidth: 140 },
   { label: 'Max Tokens', prop: 'maxTokens', width: 120, align: 'center' },
-  { label: '状态', slot: 'status', width: 80, align: 'center' },
+  { label: '状态', slot: 'status', width: 100, align: 'center' },
   { label: '创建时间', prop: 'createTime', width: 170 },
   { label: '操作', slot: 'actions', width: 130, fixed: 'right' },
 ]

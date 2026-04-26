@@ -7,7 +7,11 @@
     <div class="app-layout__main">
       <TopBar />
       <div class="app-layout__content">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <transition name="fade-slide-up" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </div>
     </div>
   </div>

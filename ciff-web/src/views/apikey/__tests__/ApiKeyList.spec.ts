@@ -293,7 +293,7 @@ describe('ApiKeyList', () => {
     await flushPromises()
 
     expect(revokeApiKey).toHaveBeenCalledWith(1)
-    expect(ElMessage.success).toHaveBeenCalledWith('API key revoked')
+    expect(ElMessage.success).toHaveBeenCalledWith('已吊销')
     // fetchKeys is called after revoke
     expect(listApiKeys).toHaveBeenCalled()
   })
@@ -314,7 +314,7 @@ describe('ApiKeyList', () => {
     vm.copyKey()
 
     expect(mockWriteText).toHaveBeenCalledWith('ciff_e5f6g7h8i9j0k1l2m3n4o5p6')
-    expect(ElMessage.success).toHaveBeenCalledWith('Copied to clipboard')
+    expect(ElMessage.success).toHaveBeenCalledWith('已复制到剪贴板')
   })
 
   // --- Loading state ---

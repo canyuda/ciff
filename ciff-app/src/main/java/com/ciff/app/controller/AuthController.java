@@ -52,6 +52,7 @@ public class AuthController {
         response.sendRedirect(gitHubOAuthService.getAuthorizeUrl());
     }
 
+    // todo [未被前端使用:设计性保留]
     @GetMapping("/github/callback")
     public void githubCallback(@RequestParam String code, HttpServletResponse response) throws IOException {
         LoginVO loginVO = gitHubOAuthService.handleCallback(code);

@@ -109,7 +109,7 @@ const columns: TableColumn[] = [
   { label: '显示名称', prop: 'displayName', minWidth: 140 },
   { label: '供应商', prop: 'providerName', minWidth: 140 },
   { label: 'Max Tokens', prop: 'maxTokens', width: 120, align: 'center' },
-  { label: '状态', slot: 'status', width: 80, align: 'center' },
+  { label: '状态', slot: 'status', width: 100, align: 'center' },
   { label: '创建时间', prop: 'createTime', width: 170 },
   { label: '操作', slot: 'actions', width: 130, fixed: 'right' },
 ]

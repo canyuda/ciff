@@ -26,6 +26,7 @@ public class ExternalChatController {
 
     private final ChatService chatService;
 
+    // todo [未被前端使用:设计性保留]
     @PostMapping
     @Operation(summary = "外部对话（非流式）")
     public Result<ChatResponse> chat(@Valid @RequestBody ChatRequest request) {
@@ -33,6 +34,7 @@ public class ExternalChatController {
         return Result.ok(response);
     }
 
+    // todo [未被前端使用:设计性保留]
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "外部对话（SSE 流式）")
     public SseEmitter streamChat(@Valid @RequestBody ChatRequest request) {

@@ -26,12 +26,14 @@ public class WorkflowController {
 
     private final WorkflowService workflowService;
 
+    // todo [未被前端使用:待清理]
     @PostMapping
     @Operation(summary = "Create workflow")
     public Result<WorkflowVO> create(@Valid @RequestBody WorkflowCreateRequest request) {
         return Result.ok(workflowService.create(request, UserContext.getUserId()));
     }
 
+    // todo [未被前端使用:待清理]
     @PutMapping("/{id}")
     @Operation(summary = "Update workflow")
     public Result<WorkflowVO> update(
@@ -40,6 +42,7 @@ public class WorkflowController {
         return Result.ok(workflowService.update(id, request, UserContext.getUserId()));
     }
 
+    // todo [未被前端使用:待清理]
     @GetMapping("/{id}")
     @Operation(summary = "Get workflow by ID")
     public Result<WorkflowVO> getById(
@@ -47,6 +50,7 @@ public class WorkflowController {
         return Result.ok(workflowService.getById(id, UserContext.getUserId()));
     }
 
+    // todo [未被前端使用:待清理]
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete workflow")
     public Result<Void> delete(
@@ -55,6 +59,7 @@ public class WorkflowController {
         return Result.ok();
     }
 
+    // todo [未被前端使用:待清理]
     @GetMapping
     @Operation(summary = "Page query workflows")
     public Result<PageResult<WorkflowVO>> page(
@@ -64,6 +69,7 @@ public class WorkflowController {
         return Result.ok(workflowService.page(page, pageSize, status, UserContext.getUserId()));
     }
 
+    // todo [未被前端使用:待清理]
     @PostMapping("/{id}/execute")
     @Operation(summary = "Submit workflow execution (async)")
     public Result<WorkflowTask> execute(

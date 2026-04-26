@@ -39,7 +39,7 @@ export interface AgentCreateRequest {
   type: string
   modelId: number
   workflowId?: number | null
-  systemPrompt: string
+  systemPrompt?: string
   modelParams?: AgentModelParam | null
   toolIds?: number[]
   knowledgeIds?: number[]

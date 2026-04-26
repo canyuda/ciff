@@ -24,6 +24,7 @@ public class KnowledgeChunkController {
 
     private final KnowledgeChunkService knowledgeChunkService;
 
+    // todo [未被前端使用:待清理]
     @GetMapping("/{id}")
     @Operation(summary = "查询单个分块")
     public Result<KnowledgeChunkPO> getById(
@@ -39,6 +40,7 @@ public class KnowledgeChunkController {
         return Result.ok(knowledgeChunkService.listByDocumentId(documentId));
     }
 
+    // todo [未被前端使用:待清理]
     @GetMapping(params = "knowledgeId")
     @Operation(summary = "按知识库ID查询分块列表")
     public Result<List<KnowledgeChunkPO>> listByKnowledgeId(
@@ -46,6 +48,7 @@ public class KnowledgeChunkController {
         return Result.ok(knowledgeChunkService.listByKnowledgeId(knowledgeId));
     }
 
+    // todo [未被前端使用:待清理]
     @DeleteMapping("/{id}")
     @Operation(summary = "删除单个分块")
     public Result<Void> deleteById(
@@ -54,6 +57,7 @@ public class KnowledgeChunkController {
         return Result.ok();
     }
 
+    // todo [未被前端使用:待清理]
     @DeleteMapping(params = "documentId")
     @Operation(summary = "按文档ID删除所有分块")
     public Result<Void> deleteByDocumentId(
@@ -62,6 +66,7 @@ public class KnowledgeChunkController {
         return Result.ok();
     }
 
+    // todo [未被前端使用:待清理]
     @DeleteMapping(params = "knowledgeId")
     @Operation(summary = "按知识库ID删除所有分块")
     public Result<Void> deleteByKnowledgeId(

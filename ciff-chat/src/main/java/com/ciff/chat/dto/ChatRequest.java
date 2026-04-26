@@ -20,10 +20,10 @@ public class ChatRequest {
     @Schema(description = "会话 ID，为空则新建会话")
     private Long conversationId;
 
-    @Schema(description = "RAG 模式: RAG_WITHOUT_RERANKER(使用RAG不精排), RAG_WITH_RERANKER(使用RAG带精排), NO_RAG(不使用RAG)。默认 RAG_WITH_RERANKER")
+    @Schema(description = "RAG 模式: RAG_WITHOUT_RERANKER(使用RAG不精排), RAG_WITH_RERANKER(使用RAG带精排), NO_RAG(不使用RAG)。默认 NO_RAG")
     private RagMode ragMode;
 
     public RagMode getRagMode() {
-        return ragMode != null ? ragMode : RagMode.RAG_WITH_RERANKER;
+        return ragMode != null ? ragMode : RagMode.NO_RAG;
     }
 }

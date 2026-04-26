@@ -4,7 +4,9 @@
       v-loading="loading"
       :data="rows"
       style="width: 100%"
+      table-layout="auto"
       :empty-text="undefined"
+      class="ciff-table__inner"
     >
       <el-table-column
         v-for="col in columns"
@@ -27,9 +29,9 @@
     </el-table>
 
     <div v-if="showPagination && total > 0" class="ciff-table__pagination">
-      <span class="ciff-table__total">总条数 {{ total }}</span>
-      <el-select v-model="currentPageSize" class="ciff-table__sizes">
-        <el-option v-for="s in [10, 20, 50]" :key="s" :label="`每页条数: ${s}`" :value="s" />
+      <span class="ciff-table__total">共 {{ total }} 条</span>
+      <el-select v-model="currentPageSize" class="ciff-table__sizes" size="small">
+        <el-option v-for="s in [10, 20, 50]" :key="s" :label="`${s} 条/页`" :value="s" />
       </el-select>
       <el-pagination
         v-model:current-page="currentPage"
@@ -102,21 +104,26 @@ defineExpose({ refresh, fetchData })
 </script>
 
 <style scoped>
+.ciff-table__inner {
+  border-radius: var(--ciff-radius-lg);
+  overflow: hidden;
+}
+
 .ciff-table__pagination {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--ciff-space-4);
-  padding-top: var(--ciff-space-4);
+  padding-top: var(--ciff-space-5);
 }
 
 .ciff-table__total {
-  color: var(--el-text-color-regular);
+  color: var(--ciff-text-secondary);
   font-size: 13px;
   white-space: nowrap;
 }
 
 .ciff-table__sizes {
-  width: 150px;
+  width: 120px;
 }
 </style>

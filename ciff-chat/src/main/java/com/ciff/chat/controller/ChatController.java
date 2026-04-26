@@ -31,6 +31,7 @@ public class ChatController {
         return Result.ok(conversationService.page(page, pageSize, agentId, UserContext.getUserId()));
     }
 
+    // todo [未被前端使用:待清理]
     @GetMapping("/{id}")
     @Operation(summary = "查询会话详情")
     public Result<ConversationVO> getById(

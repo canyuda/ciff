@@ -103,10 +103,10 @@ const dialogRef = ref<DialogRef | null>(null)
 
 const columns: TableColumn[] = [
   { label: '名称', prop: 'name', minWidth: 140 },
-  { label: '类型', slot: 'type', width: 100, align: 'center' },
+  { label: '类型', slot: 'type', width: 120, align: 'center' },
   { label: '描述', prop: 'description', minWidth: 200 },
   { label: '端点地址', prop: 'endpoint', minWidth: 240 },
-  { label: '状态', slot: 'status', width: 80, align: 'center' },
+  { label: '状态', slot: 'status', width: 100, align: 'center' },
   { label: '创建时间', prop: 'createTime', width: 170 },
   { label: '操作', slot: 'actions', minWidth: 130, fixed: 'right' },
 ]

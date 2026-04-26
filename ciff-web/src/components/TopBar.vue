@@ -6,15 +6,39 @@
       <el-breadcrumb-item v-if="currentLabel">{{ currentLabel }}</el-breadcrumb-item>
     </el-breadcrumb>
 
-    <!-- User -->
-    <div class="topbar__user">
-      <el-avatar :size="28" class="topbar__avatar">
-        {{ userInitial }}
-      </el-avatar>
-      <span class="topbar__username">{{ username }}</span>
-      <el-button text size="small" @click="handleLogout">
-        <el-icon><SwitchButton /></el-icon>
-      </el-button>
+    <!-- Right side: actions + user -->
+    <div class="topbar__right">
+      <!-- Quick actions -->
+      <div class="topbar__actions">
+        <el-tooltip content="新对话" placement="bottom">
+          <el-button text circle size="small" @click="goToChat">
+            <el-icon><ChatDotRound /></el-icon>
+          </el-button>
+        </el-tooltip>
+      </div>
+
+      <!-- User dropdown -->
+      <el-dropdown trigger="click" @command="handleCommand">
+        <div class="user-trigger">
+          <el-avatar :size="30" class="user-trigger__avatar">
+            {{ userInitial }}
+          </el-avatar>
+          <span class="user-trigger__name">{{ username }}</span>
+          <el-icon class="user-trigger__arrow"><ArrowDown /></el-icon>
+        </div>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="profile" disabled>
+              <el-icon><User /></el-icon>
+              个人资料
+            </el-dropdown-item>
+            <el-dropdown-item divided command="logout">
+              <el-icon style="color: var(--ciff-danger)"><SwitchButton /></el-icon>
+              <span style="color: var(--ciff-danger)">退出登录</span>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
   </header>
 </template>
@@ -22,7 +46,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { SwitchButton } from '@element-plus/icons-vue'
+import { SwitchButton, ArrowDown, User, ChatDotRound } from '@element-plus/icons-vue'
 import { getUser, removeToken } from '@/utils/auth'
 import { logout } from '@/api/auth'
 
@@ -57,14 +81,20 @@ const currentUser = computed(() => getUser())
 const username = computed(() => currentUser.value?.username || 'User')
 const userInitial = computed(() => username.value.charAt(0).toUpperCase())
 
-async function handleLogout() {
-  try {
-    await logout()
-  } catch {
-    // ignore
+function goToChat() {
+  router.push('/chat')
+}
+
+async function handleCommand(command: string) {
+  if (command === 'logout') {
+    try {
+      await logout()
+    } catch {
+      // ignore
+    }
+    removeToken()
+    router.push('/login')
   }
-  removeToken()
-  router.push('/login')
 }
 </script>
 
@@ -80,22 +110,50 @@ async function handleLogout() {
   flex-shrink: 0;
 }
 
-.topbar__user {
+.topbar__right {
   display: flex;
   align-items: center;
   gap: var(--ciff-space-2);
 }
 
-.topbar__avatar {
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ciff-space-1);
+  padding-right: var(--ciff-space-2);
+  border-right: 1px solid var(--ciff-border-light);
+  margin-right: var(--ciff-space-1);
+}
+
+.user-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--ciff-space-2);
+  padding: 4px 8px 4px 4px;
+  border-radius: var(--ciff-radius-lg);
+  cursor: pointer;
+  transition: all var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+
+.user-trigger:hover {
+  background: var(--ciff-neutral-50);
+}
+
+.user-trigger__avatar {
   background: var(--ciff-btn-gradient);
   color: #fff;
   font-size: var(--ciff-text-xs);
   font-weight: var(--ciff-font-semibold);
 }
 
-.topbar__username {
+.user-trigger__name {
   font-size: var(--ciff-text-sm);
   color: var(--ciff-text-primary);
   font-weight: var(--ciff-font-medium);
+}
+
+.user-trigger__arrow {
+  font-size: 12px;
+  color: var(--ciff-text-tertiary);
 }
 </style>

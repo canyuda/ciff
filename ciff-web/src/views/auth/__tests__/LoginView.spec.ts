@@ -96,6 +96,7 @@ function createWrapper() {
         'el-form-item': ElFormItemStub,
         'el-input': ElInputStub,
         'el-button': ElButtonStub,
+        'el-icon': { template: '<span class=\"el-icon\"><slot /></span>' },
       },
     },
   })
@@ -116,9 +117,9 @@ describe('LoginView', () => {
     expect(wrapper.findAll('.el-form-item')).toHaveLength(3)
     expect(wrapper.findAll('.el-input')).toHaveLength(2)
     expect(wrapper.find('.login-btn').exists()).toBe(true)
-    expect(wrapper.find('.login-btn').text()).toContain('Sign in')
+    expect(wrapper.find('.login-btn').text()).toContain('登录')
     expect(wrapper.find('.github-btn').exists()).toBe(true)
-    expect(wrapper.find('.github-btn').text()).toContain('Sign in with GitHub')
+    expect(wrapper.find('.github-btn').text()).toContain('GitHub 登录')
   })
 
   it('should show GitHub OAuth button with correct href', () => {
@@ -188,7 +189,7 @@ describe('LoginView', () => {
     })
     expect(setToken).toHaveBeenCalledWith('jwt-token-123')
     expect(setUser).toHaveBeenCalledWith({ id: 1, username: 'admin', role: 'admin' })
-    expect(ElMessage.success).toHaveBeenCalledWith('Login successful')
+    expect(ElMessage.success).toHaveBeenCalledWith('登录成功')
     expect(mockPush).toHaveBeenCalledWith('/')
   })
 
@@ -258,6 +259,7 @@ describe('LoginView', () => {
           'el-form-item': ElFormItemStub,
           'el-input': ElInputStub,
           'el-button': ElButtonStub,
+          'el-icon': { template: '<span class=\"el-icon\"><slot /></span>' },
         },
       },
     })
@@ -269,7 +271,7 @@ describe('LoginView', () => {
       username: 'githubuser',
       role: 'user',
     })
-    expect(ElMessage.success).toHaveBeenCalledWith('Login successful')
+    expect(ElMessage.success).toHaveBeenCalledWith('登录成功')
     expect(mockPush).toHaveBeenCalledWith('/')
   })
 
@@ -285,6 +287,7 @@ describe('LoginView', () => {
           'el-form-item': ElFormItemStub,
           'el-input': ElInputStub,
           'el-button': ElButtonStub,
+          'el-icon': { template: '<span class=\"el-icon\"><slot /></span>' },
         },
       },
     })

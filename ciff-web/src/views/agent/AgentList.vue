@@ -199,7 +199,7 @@ interface AgentForm {
   description?: string
   type: string
   modelId?: number
-  systemPrompt: string
+  systemPrompt?: string
   workflowId?: number
   modelParams?: AgentModelParam
   toolIds?: number[]
@@ -215,11 +215,11 @@ const workflowOptions = ref<WorkflowVO[]>([])
 
 const columns: TableColumn[] = [
   { label: '名称', prop: 'name', minWidth: 140 },
-  { label: '类型', slot: 'type', width: 110, align: 'center' },
+  { label: '类型', slot: 'type', width: 120, align: 'center' },
   { label: '模型', prop: 'modelName', minWidth: 120 },
-  { label: '工具数', slot: 'tools', width: 80, align: 'center' },
-  { label: '知识库', slot: 'knowledges', width: 80, align: 'center' },
-  { label: '状态', slot: 'status', width: 80, align: 'center' },
+  { label: '工具数', slot: 'tools', width: 100, align: 'center' },
+  { label: '知识库', slot: 'knowledges', width: 100, align: 'center' },
+  { label: '状态', slot: 'status', width: 100, align: 'center' },
   { label: '创建时间', prop: 'createTime', width: 170 },
   { label: '操作', slot: 'actions', minWidth: 130, fixed: 'right' },
 ]
@@ -272,8 +272,8 @@ async function openEditDialog(id?: number) {
     description: detail.description,
     type: detail.type,
     modelId: detail.modelId,
-    systemPrompt: detail.systemPrompt,
-    workflowId: detail.workflowId,
+    systemPrompt: detail.systemPrompt ?? undefined,
+    workflowId: detail.workflowId ?? undefined,
     modelParams: {
       temperature: detail.modelParams?.temperature ?? DEFAULT_MODEL_PARAMS.temperature!,
       maxTokens: detail.modelParams?.maxTokens ?? DEFAULT_MODEL_PARAMS.maxTokens!,

@@ -9,23 +9,25 @@
         </el-button>
       </div>
       <el-scrollbar class="conversation-list">
-        <div
-          v-for="conv in conversations"
-          :key="conv.id"
-          :class="['conversation-item', { active: conv.id === currentConversationId }]"
-          @click="selectConversation(conv.id)"
-        >
-          <div class="conversation-title">{{ conv.title }}</div>
-          <div class="conversation-meta">
-            <span class="agent-name">{{ conv.agentName }}</span>
-            <span class="conv-time">{{ formatDate(conv.updateTime) }}</span>
+        <TransitionGroup name="conv">
+          <div
+            v-for="conv in conversations"
+            :key="conv.id"
+            :class="['conversation-item', { active: conv.id === currentConversationId }]"
+            @click="selectConversation(conv.id)"
+          >
+            <div class="conversation-title">{{ conv.title }}</div>
+            <div class="conversation-meta">
+              <span class="agent-name">{{ conv.agentName }}</span>
+              <span class="conv-time">{{ formatDate(conv.updateTime) }}</span>
+            </div>
+            <div class="delete-btn" @click.stop="handleDeleteConversation(conv.id)">
+              <el-icon><Delete /></el-icon>
+            </div>
           </div>
-          <el-icon class="delete-btn" @click.stop="handleDeleteConversation(conv.id)">
-            <Delete />
-          </el-icon>
-        </div>
+        </TransitionGroup>
         <div v-if="conversations.length === 0" class="conv-empty">
-          <span>暂无会话</span>
+          <el-empty description="暂无会话" :image-size="60" />
         </div>
       </el-scrollbar>
     </aside>
@@ -34,51 +36,67 @@
     <main class="chat-main">
       <!-- Header -->
       <div v-if="currentAgent" class="chat-header">
-        <span class="chat-agent-name">{{ currentAgent.name }}</span>
-        <el-tag v-if="currentAgent.type" size="small" :type="currentAgent.type === 'agent' ? 'success' : 'primary'">
-          {{ currentAgent.type }}
-        </el-tag>
+        <div class="chat-header__left">
+          <el-avatar :size="28" :icon="Service" class="chat-header__avatar" />
+          <span class="chat-agent-name">{{ currentAgent.name }}</span>
+          <el-tag v-if="currentAgent.type" size="small" :type="currentAgent.type === 'agent' ? 'success' : 'primary'" effect="light">
+            {{ currentAgent.type }}
+          </el-tag>
+        </div>
       </div>
 
       <!-- Message list -->
       <el-scrollbar ref="messageScrollRef" class="message-list" :key="scrollKey">
         <div v-if="messages.length === 0 && !isStreaming" class="empty-state">
-          <el-empty :description="currentAgent ? '开始发送消息...' : '选择 Agent 开始新会话'" />
+          <div class="empty-content">
+            <div class="empty-icon">
+              <el-icon :size="48"><ChatDotRound /></el-icon>
+            </div>
+            <h3 class="empty-title">{{ currentAgent ? '开始对话' : '选择 Agent 开始新会话' }}</h3>
+            <p v-if="currentAgent" class="empty-desc">输入您的问题，AI 将为您提供帮助</p>
+            <el-button v-else type="primary" @click="openAgentSelector">
+              <el-icon><Plus /></el-icon>选择 Agent
+            </el-button>
+          </div>
         </div>
 
-        <div v-for="msg in messages" :key="msg.id" :class="['message-row', msg.role]">
-          <div class="message-avatar">
-            <el-avatar v-if="msg.role === 'assistant'" :size="32" :icon="Service" />
-            <el-avatar v-else :size="32" :icon="User" />
-          </div>
-          <div class="message-bubble">
-            <div v-if="msg.role === 'assistant'" class="message-content markdown-body" v-html="renderMarkdown(msg.content)"></div>
-            <div v-else class="message-content">{{ msg.content }}</div>
-            <div class="message-meta">
-              <template v-if="msg.role === 'assistant'">
-                <span v-if="msg.modelName" class="model-tag">{{ msg.modelName }}</span>
-                <span v-if="msg.referenceDocuments && msg.referenceDocuments.length > 0" class="ref-docs">
-                  <el-icon><Document /></el-icon>
-                  {{ msg.referenceDocuments.join('，') }}
-                </span>
-              </template>
-              <span class="msg-time">{{ formatTime(msg.createTime) }}</span>
+        <div class="message-container">
+          <div v-for="msg in messages" :key="msg.id" :class="['message-row', msg.role]">
+            <div class="message-avatar">
+              <el-avatar v-if="msg.role === 'assistant'" :size="32" :icon="Service" class="assistant-avatar" />
+              <el-avatar v-else :size="32" :icon="User" class="user-avatar" />
+            </div>
+            <div class="message-bubble">
+              <div v-if="msg.role === 'assistant'" class="message-content markdown-body" v-html="renderMarkdown(msg.content)"></div>
+              <div v-else class="message-content">{{ msg.content }}</div>
+              <div class="message-meta">
+                <template v-if="msg.role === 'assistant'">
+                  <span v-if="msg.modelName" class="model-tag">{{ msg.modelName }}</span>
+                  <span v-if="msg.referenceDocuments && msg.referenceDocuments.length > 0" class="ref-docs">
+                    <el-icon><Document /></el-icon>
+                    {{ msg.referenceDocuments.join('，') }}
+                  </span>
+                </template>
+                <span class="msg-time">{{ formatTime(msg.createTime) }}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Streaming temporary message -->
-        <div v-if="isStreaming" class="message-row assistant">
-          <div class="message-avatar">
-            <el-avatar :size="32" :icon="Service" />
-          </div>
-          <div class="message-bubble streaming">
-            <div class="message-content">{{ streamingContent }}</div>
-            <div class="message-meta">
-              <span class="streaming-indicator">
-                <el-icon class="is-loading"><Loading /></el-icon>
-                生成中...
-              </span>
+          <!-- Streaming temporary message -->
+          <div v-if="isStreaming" class="message-row assistant">
+            <div class="message-avatar">
+              <el-avatar :size="32" :icon="Service" class="assistant-avatar" />
+            </div>
+            <div class="message-bubble streaming">
+              <div class="message-content">{{ streamingContent }}</div>
+              <div class="message-meta">
+                <span class="streaming-indicator">
+                  <span class="dot pulse-dot"></span>
+                  <span class="dot pulse-dot"></span>
+                  <span class="dot pulse-dot"></span>
+                  生成中
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -87,56 +105,65 @@
       <!-- Input area -->
       <div class="input-area">
         <div v-if="!currentAgent" class="input-placeholder">
-          <el-button type="primary" @click="openAgentSelector">
+          <el-button type="primary" size="large" @click="openAgentSelector">
             <el-icon><Plus /></el-icon>
             选择 Agent 开始新会话
           </el-button>
         </div>
         <template v-else>
           <div class="input-toolbar">
-            <span class="toolbar-label">RAG 模式</span>
-            <el-select v-model="ragMode" size="small" style="width: 160px">
-              <el-option label="RAG + 精排" value="RAG_WITH_RERANKER" />
-              <el-option label="RAG" value="RAG_WITHOUT_RERANKER" />
-              <el-option label="关闭 RAG" value="NO_RAG" />
-            </el-select>
+            <div class="toolbar-left">
+              <span class="toolbar-label">RAG 模式</span>
+              <el-select v-model="ragMode" size="small" style="width: 140px">
+                <el-option label="RAG + 精排" value="RAG_WITH_RERANKER" />
+                <el-option label="RAG" value="RAG_WITHOUT_RERANKER" />
+                <el-option label="关闭 RAG" value="NO_RAG" />
+              </el-select>
+            </div>
           </div>
           <div class="input-wrapper">
-            <el-input
-              v-model="inputMessage"
-              type="textarea"
-              :rows="3"
-              placeholder="输入消息，Shift + Enter 换行，Enter 发送"
-              :disabled="isStreaming"
-            resize="none"
-            @keydown="handleKeydown"
-          />
-          <div class="input-actions">
-            <el-button
-              v-if="isStreaming"
-              type="danger"
-              @click="handleStop"
-            >
-              <el-icon><VideoPause /></el-icon>
-              停止
-            </el-button>
-            <el-button
-              v-else
-              type="primary"
-              :disabled="!inputMessage.trim() || !currentAgent"
-              @click="handleSend"
-            >
-              <el-icon><Promotion /></el-icon>
-              发送
-            </el-button>
+            <div class="input-box">
+              <el-input
+                v-model="inputMessage"
+                type="textarea"
+                :rows="2"
+                placeholder="输入消息，Shift + Enter 换行，Enter 发送..."
+                :disabled="isStreaming"
+                resize="none"
+                @keydown="handleKeydown"
+              />
+              <div class="input-actions">
+                <el-button
+                  v-if="isStreaming"
+                  type="danger"
+                  size="small"
+                  circle
+                  @click="handleStop"
+                >
+                  <el-icon><VideoPause /></el-icon>
+                </el-button>
+                <el-button
+                  v-else
+                  type="primary"
+                  size="small"
+                  circle
+                  :disabled="!inputMessage.trim()"
+                  @click="handleSend"
+                >
+                  <el-icon><Promotion /></el-icon>
+                </el-button>
+              </div>
+            </div>
+            <div class="input-hint">
+              <span>Enter 发送 · Shift + Enter 换行</span>
+            </div>
           </div>
-        </div>
         </template>
       </div>
     </main>
 
     <!-- Agent selector dialog -->
-    <el-dialog v-model="agentDialogVisible" title="选择 Agent" width="480px">
+    <el-dialog v-model="agentDialogVisible" title="选择 Agent" width="480px" class="agent-dialog">
       <el-select v-model="selectedAgentId" placeholder="请选择 Agent" style="width: 100%">
         <el-option
           v-for="agent in agentList"
@@ -145,7 +172,7 @@
           :value="agent.id!"
         >
           <span>{{ agent.name }}</span>
-          <el-tag size="small" style="margin-left: 8px" :type="agent.type === 'agent' ? 'success' : 'primary'">
+          <el-tag size="small" style="margin-left: 8px" :type="agent.type === 'agent' ? 'success' : 'primary'" effect="light">
             {{ agent.type }}
           </el-tag>
         </el-option>
@@ -168,10 +195,10 @@ import {
   Delete,
   Promotion,
   VideoPause,
-  Loading,
   User,
   Service,
   Document,
+  ChatDotRound,
 } from '@element-plus/icons-vue'
 import { renderMarkdown } from '@/utils/markdown'
 import {
@@ -198,14 +225,13 @@ const streamingContent = ref('')
 const streamingRefDocs = ref<string[]>([])
 const agentDialogVisible = ref(false)
 const selectedAgentId = ref<number | null>(null)
-const ragMode = ref<'RAG_WITH_RERANKER' | 'RAG_WITHOUT_RERANKER' | 'NO_RAG'>('RAG_WITH_RERANKER')
+const ragMode = ref<'RAG_WITH_RERANKER' | 'RAG_WITHOUT_RERANKER' | 'NO_RAG'>('NO_RAG')
 const messageScrollRef = ref<InstanceType<typeof ElScrollbar>>()
 const scrollKey = ref(0)
 let streamController: AbortController | null = null
 
 // ========== Lifecycle ==========
 onMounted(async () => {
-  // agents must load first — selectConversation needs agentList to set currentAgent
   await loadAgents()
   await loadConversations()
 })
@@ -215,12 +241,11 @@ async function loadConversations() {
   try {
     const res = await getConversations({ page: 1, pageSize: 50 })
     conversations.value = res.list
-    // Auto-select last (most recent) conversation if none selected
     if (conversations.value.length > 0 && !currentConversationId.value) {
       selectConversation(conversations.value[conversations.value.length - 1].id)
     }
   } catch {
-    // silently fail, keep existing list
+    // silently fail
   }
 }
 
@@ -236,7 +261,6 @@ async function loadAgents() {
 async function loadMessages(conversationId: number) {
   try {
     const res = await getMessages({ conversationId, page: 1, pageSize: 100 })
-    // Backend returns ASC (oldest first), no need to reverse
     messages.value = res.list
     scrollToBottom()
   } catch {
@@ -305,7 +329,6 @@ async function handleSend() {
 
   inputMessage.value = ''
 
-  // Add user message locally
   const userMsg: ChatMessageVO = {
     id: Date.now(),
     conversationId: currentConversationId.value || 0,
@@ -438,8 +461,8 @@ function formatTime(iso: string): string {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-right: 2px solid var(--ciff-border);
-  background: var(--ciff-bg-secondary);
+  border-right: 1px solid var(--ciff-border-light);
+  background: var(--ciff-bg-card);
 }
 
 .sidebar-header {
@@ -455,19 +478,27 @@ function formatTime(iso: string): string {
 .conversation-item {
   position: relative;
   padding: 12px 16px;
-  padding-right: 48px;
+  padding-right: 40px;
   cursor: pointer;
   border-bottom: 1px solid var(--ciff-border-light);
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  margin: 4px 8px;
+  border-radius: var(--ciff-radius-lg);
+  border-bottom: none;
 }
 
 .conversation-item:hover {
-  background: var(--ciff-bg-tertiary);
+  background: var(--ciff-neutral-50);
 }
 
 .conversation-item.active {
-  background: rgba(99, 102, 241, 0.08);
-  border-left: 3px solid var(--ciff-primary-400);
+  background: var(--ciff-primary-50);
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.15);
+}
+
+.conversation-item.active .conversation-title {
+  color: var(--ciff-primary-700);
+  font-weight: var(--ciff-font-semibold);
 }
 
 .conversation-title {
@@ -490,6 +521,7 @@ function formatTime(iso: string): string {
 
 .agent-name {
   color: var(--ciff-primary-500);
+  font-weight: var(--ciff-font-medium);
 }
 
 .delete-btn {
@@ -498,15 +530,15 @@ function formatTime(iso: string): string {
   right: 8px;
   transform: translateY(-50%);
   opacity: 0;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   color: var(--ciff-text-tertiary);
   cursor: pointer;
   padding: 6px;
-  font-size: 18px;
-  border-radius: 6px;
-  background: var(--ciff-bg-primary);
-  border: 1px solid var(--ciff-border-light);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+  border-radius: var(--ciff-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .conversation-item:hover .delete-btn {
@@ -516,14 +548,22 @@ function formatTime(iso: string): string {
 .delete-btn:hover {
   color: var(--el-color-danger);
   background: var(--el-color-danger-light-9);
-  border-color: var(--el-color-danger-light-5);
 }
 
 .conv-empty {
   padding: 32px 16px;
-  text-align: center;
-  color: var(--ciff-text-tertiary);
-  font-size: 13px;
+}
+
+/* Conversation list transitions */
+.conv-enter-active,
+.conv-leave-active {
+  transition: all 0.3s ease;
+}
+
+.conv-enter-from,
+.conv-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
 }
 
 /* ===== Main chat area ===== */
@@ -531,22 +571,34 @@ function formatTime(iso: string): string {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--ciff-bg-primary);
+  background: var(--ciff-bg-page);
   min-width: 0;
 }
 
 .chat-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   padding: 12px 24px;
   border-bottom: 1px solid var(--ciff-border-light);
-  background: var(--ciff-bg-secondary);
+  background: var(--ciff-bg-card);
+  flex-shrink: 0;
+}
+
+.chat-header__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-header__avatar {
+  background: var(--ciff-btn-gradient);
+  color: #fff;
 }
 
 .chat-agent-name {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: var(--ciff-font-semibold);
   color: var(--ciff-text-primary);
 }
 
@@ -554,33 +606,82 @@ function formatTime(iso: string): string {
 .message-list {
   flex: 1;
   overflow: auto;
-  padding: 24px 16px;
 }
 
 .message-list :deep(.el-scrollbar__wrap) {
   display: flex;
   flex-direction: column;
-  align-items: center;
 }
 
 .message-list :deep(.el-scrollbar__view) {
   width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-container {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .empty-state {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  min-height: 400px;
+}
+
+.empty-content {
+  text-align: center;
+}
+
+.empty-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ciff-primary-50);
+  border-radius: var(--ciff-radius-2xl);
+  color: var(--ciff-primary-400);
+}
+
+.empty-title {
+  font-family: var(--ciff-font-heading);
+  font-size: var(--ciff-text-xl);
+  font-weight: var(--ciff-font-bold);
+  color: var(--ciff-text-primary);
+  margin: 0 0 8px;
+}
+
+.empty-desc {
+  font-size: var(--ciff-text-sm);
+  color: var(--ciff-text-secondary);
+  margin: 0 0 20px;
 }
 
 .message-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 12px;
   max-width: 85%;
+  animation: messageIn 0.3s cubic-bezier(0, 0, 0.2, 1);
+}
+
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message-row.user {
@@ -594,36 +695,49 @@ function formatTime(iso: string): string {
 
 .message-avatar {
   flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.assistant-avatar {
+  background: var(--ciff-btn-gradient);
+  color: #fff;
+}
+
+.user-avatar {
+  background: var(--ciff-neutral-200);
+  color: var(--ciff-neutral-600);
 }
 
 .message-bubble {
-  padding: 12px 16px;
-  border-radius: 12px;
+  padding: 14px 18px;
+  border-radius: 16px;
   max-width: 100%;
   word-break: break-word;
 }
 
 .message-row.user .message-bubble {
-  background: var(--ciff-primary-500);
+  background: var(--ciff-btn-gradient);
   color: white;
   border-bottom-right-radius: 4px;
+  box-shadow: var(--ciff-shadow-primary);
 }
 
 .message-row.assistant .message-bubble {
   background: var(--ciff-bg-card);
   color: var(--ciff-text-primary);
-  border: 1px solid var(--ciff-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--ciff-border-light);
+  box-shadow: var(--ciff-shadow-xs);
   border-bottom-left-radius: 4px;
 }
 
 .message-content {
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.6;
 }
 
+/* Markdown styling */
 .markdown-body :deep(p) {
-  margin: 0 0 4px;
+  margin: 0 0 6px;
 }
 
 .markdown-body :deep(p:last-child) {
@@ -631,14 +745,14 @@ function formatTime(iso: string): string {
 }
 
 .markdown-body :deep(pre.hljs) {
-  background: var(--ciff-bg-primary);
+  background: var(--ciff-neutral-900);
   border: 1px solid var(--ciff-border-light);
-  border-radius: 6px;
-  padding: 12px;
+  border-radius: var(--ciff-radius-lg);
+  padding: 14px;
   overflow-x: auto;
-  margin: 8px 0;
+  margin: 10px 0;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .markdown-body :deep(code) {
@@ -656,34 +770,45 @@ function formatTime(iso: string): string {
 
 .markdown-body :deep(ul),
 .markdown-body :deep(ol) {
-  padding-left: 20px;
-  margin: 4px 0;
+  padding-left: 22px;
+  margin: 6px 0;
+}
+
+.markdown-body :deep(li) {
+  margin: 3px 0;
 }
 
 .markdown-body :deep(blockquote) {
   border-left: 3px solid var(--ciff-primary-300);
-  padding-left: 12px;
-  margin: 8px 0;
+  padding-left: 14px;
+  margin: 10px 0;
   color: var(--ciff-text-tertiary);
+  font-style: italic;
 }
 
 .markdown-body :deep(table) {
   border-collapse: collapse;
   width: 100%;
-  margin: 8px 0;
+  margin: 10px 0;
   font-size: 13px;
+  border-radius: var(--ciff-radius-md);
+  overflow: hidden;
 }
 
 .markdown-body :deep(th),
 .markdown-body :deep(td) {
   border: 1px solid var(--ciff-border-light);
-  padding: 6px 12px;
+  padding: 8px 14px;
   text-align: left;
 }
 
 .markdown-body :deep(th) {
-  background: var(--ciff-bg-secondary);
-  font-weight: 600;
+  background: var(--ciff-neutral-50);
+  font-weight: var(--ciff-font-semibold);
+}
+
+.markdown-body :deep(tr:nth-child(even)) {
+  background: var(--ciff-neutral-50);
 }
 
 .markdown-body :deep(a) {
@@ -695,17 +820,29 @@ function formatTime(iso: string): string {
   text-decoration: underline;
 }
 
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4) {
+  margin: 16px 0 8px;
+  font-weight: var(--ciff-font-semibold);
+}
+
+.markdown-body :deep(h1) { font-size: 18px; }
+.markdown-body :deep(h2) { font-size: 16px; }
+.markdown-body :deep(h3) { font-size: 15px; }
+
 .message-meta {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 11px;
 }
 
 .message-row.user .message-meta {
   justify-content: flex-end;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .message-row.assistant .message-meta {
@@ -713,11 +850,12 @@ function formatTime(iso: string): string {
 }
 
 .model-tag {
-  background: var(--ciff-primary-100);
+  background: var(--ciff-primary-50);
   color: var(--ciff-primary-600);
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 4px;
   font-size: 10px;
+  font-weight: var(--ciff-font-medium);
 }
 
 .ref-docs {
@@ -735,15 +873,25 @@ function formatTime(iso: string): string {
 .streaming-indicator {
   display: flex;
   align-items: center;
-  gap: 4px;
-  color: var(--ciff-primary-400);
+  gap: 6px;
+  color: var(--ciff-primary-500);
+  font-size: 11px;
+  font-weight: var(--ciff-font-medium);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: var(--ciff-primary-400);
+  border-radius: 50%;
 }
 
 /* ===== Input area ===== */
 .input-area {
-  padding: 16px 24px;
+  padding: 16px 24px 20px;
   border-top: 1px solid var(--ciff-border-light);
-  background: var(--ciff-bg-secondary);
+  background: var(--ciff-bg-card);
+  flex-shrink: 0;
 }
 
 .input-placeholder {
@@ -755,38 +903,82 @@ function formatTime(iso: string): string {
 .input-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  max-width: 900px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  max-width: 800px;
   margin-left: auto;
   margin-right: auto;
 }
 
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .toolbar-label {
-  font-size: 13px;
-  color: var(--ciff-text-secondary);
+  font-size: 12px;
+  color: var(--ciff-text-tertiary);
+  font-weight: var(--ciff-font-medium);
 }
 
 .input-wrapper {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-  max-width: 900px;
+  max-width: 800px;
   margin: 0 auto;
 }
 
-.input-wrapper :deep(.el-textarea__inner) {
-  background: var(--ciff-bg-primary);
-  border-color: var(--ciff-border-light);
-  color: var(--ciff-text-primary);
+.input-box {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  background: var(--ciff-bg-page);
+  border: 1px solid var(--ciff-border);
+  border-radius: var(--ciff-radius-xl);
+  padding: 10px 14px;
+  transition: all var(--ciff-duration-normal) var(--ciff-ease-default);
 }
 
-.input-wrapper :deep(.el-textarea__inner:focus) {
-  border-color: var(--ciff-primary-400);
+.input-box:focus-within {
+  border-color: var(--ciff-primary-300);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08), var(--ciff-shadow-sm);
+}
+
+.input-box :deep(.el-textarea__inner) {
+  background: transparent;
+  border: none;
+  box-shadow: none !important;
+  padding: 4px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+}
+
+.input-box :deep(.el-textarea__inner:focus) {
+  box-shadow: none !important;
 }
 
 .input-actions {
   flex-shrink: 0;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
+}
+
+.input-actions .el-button {
+  transition: all var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+
+.input-actions .el-button:not(:disabled):hover {
+  transform: scale(1.05);
+}
+
+.input-hint {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ciff-text-tertiary);
+}
+
+/* ===== Agent dialog ===== */
+:deep(.agent-dialog .el-dialog__body) {
+  padding-top: 8px;
 }
 </style>

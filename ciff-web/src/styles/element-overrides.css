@@ -1,7 +1,7 @@
 /*
  * Ciff Element Plus Theme Overrides
  *
- * Maps Ciff design tokens → Element Plus CSS variables.
+ * Maps Ciff design tokens -> Element Plus CSS variables.
  * Must be imported AFTER Element Plus base styles.
  */
 
@@ -117,7 +117,7 @@
 
 /* ============================================================
  * Button style overrides
- * Primary → gradient | Default → outline | Danger → solid red
+ * Primary -> gradient | Default -> outline | Danger -> solid red
  * ============================================================ */
 
 /* Primary: gradient */
@@ -126,6 +126,7 @@
   border-color: transparent;
   color: #fff;
   box-shadow: var(--ciff-shadow-primary);
+  transition: all var(--ciff-duration-normal) var(--ciff-ease-default);
 }
 .el-button--primary:hover,
 .el-button--primary:focus {
@@ -133,17 +134,20 @@
   border-color: transparent;
   color: #fff;
   box-shadow: var(--ciff-shadow-primary-lg);
+  transform: translateY(-1px);
 }
 .el-button--primary:active {
   background: var(--ciff-btn-gradient-active);
   border-color: transparent;
   color: #fff;
+  transform: translateY(0);
 }
 .el-button--primary.is-disabled,
 .el-button--primary.is-disabled:hover {
   background: var(--ciff-btn-gradient);
   border-color: transparent;
   opacity: 0.5;
+  transform: none;
 }
 
 /* Default: white bg + border outline */
@@ -151,6 +155,7 @@
   background: var(--ciff-bg-card);
   border-color: var(--ciff-border);
   color: var(--ciff-text-primary);
+  transition: all var(--ciff-duration-normal) var(--ciff-ease-default);
 }
 .el-button--default:hover,
 .el-button--default:focus {
@@ -164,12 +169,421 @@
   background: var(--ciff-danger);
   border-color: var(--ciff-danger);
   color: #fff;
+  transition: all var(--ciff-duration-normal) var(--ciff-ease-default);
 }
 .el-button--danger:hover,
 .el-button--danger:focus {
   background: #DC2626;
   border-color: #DC2626;
   color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Link buttons */
+.el-button.is-link {
+  transition: all var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+.el-button.is-link:hover {
+  transform: translateY(-1px);
+}
+
+/* Text buttons */
+.el-button.is-text {
+  transition: all var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+
+/* Small buttons */
+.el-button--small {
+  border-radius: var(--ciff-radius-md);
+}
+
+/* ============================================================
+ * Input overrides
+ * ============================================================ */
+.el-input__wrapper,
+.el-textarea__inner {
+  border-radius: var(--ciff-radius-md) !important;
+  box-shadow: 0 0 0 1px var(--ciff-border) inset !important;
+  transition: all var(--ciff-duration-normal) var(--ciff-ease-default);
+}
+
+.el-input__wrapper:hover,
+.el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px var(--ciff-neutral-300) inset !important;
+}
+
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--ciff-primary-400) inset, 0 0 0 3px rgba(99, 102, 241, 0.08) !important;
+}
+
+.el-input__inner {
+  font-family: var(--ciff-font-body);
+}
+
+.el-input--large .el-input__wrapper {
+  border-radius: var(--ciff-radius-lg) !important;
+  padding: 4px 16px;
+}
+
+/* ============================================================
+ * Select overrides
+ * ============================================================ */
+.el-select .el-input.is-focus .el-input__wrapper {
+  box-shadow: 0 0 0 1px var(--ciff-primary-400) inset, 0 0 0 3px rgba(99, 102, 241, 0.08) !important;
+}
+
+/* ============================================================
+ * Table overrides
+ * ============================================================ */
+.el-table {
+  border-radius: var(--ciff-radius-lg);
+  overflow: hidden;
+  --el-table-header-text-color: var(--ciff-neutral-600);
+  --el-table-header-bg-color: var(--ciff-neutral-50);
+}
+
+.el-table th.el-table__cell {
+  font-weight: var(--ciff-font-semibold);
+  font-size: var(--ciff-text-sm);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 14px 16px;
+  background: var(--ciff-neutral-50);
+  border-bottom: 1px solid var(--ciff-border);
+  white-space: nowrap;
+}
+
+.el-table td.el-table__cell {
+  padding: 14px 16px;
+  font-size: var(--ciff-text-sm);
+  color: var(--ciff-neutral-700);
+  border-bottom: 1px solid var(--ciff-border-light);
+  transition: background-color var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+
+.el-table .cell {
+  white-space: nowrap;
+}
+
+.el-table tr:hover td.el-table__cell {
+  background-color: var(--ciff-neutral-50);
+}
+
+.el-table .el-table__row {
+  transition: all var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+
+/* Table empty state */
+.el-table__empty-block {
+  padding: 48px 0;
+}
+
+/* ============================================================
+ * Pagination overrides
+ * ============================================================ */
+.el-pagination.is-background .btn-prev,
+.el-pagination.is-background .btn-next,
+.el-pagination.is-background .el-pager li {
+  background: var(--ciff-bg-card);
+  border: 1px solid var(--ciff-border-light);
+  border-radius: var(--ciff-radius-md);
+  font-weight: var(--ciff-font-medium);
+  font-size: var(--ciff-text-sm);
+  transition: all var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+
+.el-pagination.is-background .el-pager li.is-active {
+  background: var(--ciff-btn-gradient);
+  border-color: transparent;
+  box-shadow: var(--ciff-shadow-primary);
+}
+
+.el-pagination.is-background .el-pager li:not(.is-active):hover {
+  background: var(--ciff-primary-50);
+  border-color: var(--ciff-primary-200);
+  color: var(--ciff-primary-600);
+}
+
+/* ============================================================
+ * Dialog overrides
+ * ============================================================ */
+.el-dialog {
+  border-radius: var(--ciff-radius-2xl);
+  box-shadow: var(--ciff-shadow-xl);
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--ciff-border-light);
+  margin-right: 0;
+}
+
+.el-dialog__title {
+  font-family: var(--ciff-font-heading);
+  font-weight: var(--ciff-font-bold);
+  font-size: var(--ciff-text-lg);
+  color: var(--ciff-text-primary);
+}
+
+.el-dialog__body {
+  padding: 20px 24px;
+}
+
+.el-dialog__footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--ciff-border-light);
+}
+
+.el-overlay-dialog {
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+/* ============================================================
+ * Tag overrides
+ * ============================================================ */
+.el-tag {
+  border-radius: var(--ciff-radius-md);
+  font-weight: var(--ciff-font-medium);
+  font-size: var(--ciff-text-xs);
+  padding: 0 10px;
+  height: 24px;
+  border-width: 1px;
+  transition: all var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+
+.el-tag--success {
+  background: var(--ciff-success-light);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: var(--ciff-success-dark);
+}
+
+.el-tag--warning {
+  background: var(--ciff-warning-light);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: var(--ciff-warning-dark);
+}
+
+.el-tag--danger {
+  background: var(--ciff-danger-light);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: var(--ciff-danger-dark);
+}
+
+.el-tag--info {
+  background: var(--ciff-neutral-100);
+  border-color: var(--ciff-border);
+  color: var(--ciff-neutral-600);
+}
+
+/* ============================================================
+ * Form overrides
+ * ============================================================ */
+.el-form-item__label {
+  font-weight: var(--ciff-font-medium);
+  font-size: var(--ciff-text-sm);
+  color: var(--ciff-text-primary);
+  padding-bottom: 6px;
+}
+
+.el-form-item {
+  margin-bottom: 20px;
+}
+
+/* ============================================================
+ * Card overrides
+ * ============================================================ */
+.el-card {
+  border-radius: var(--ciff-radius-xl);
+  border: 1px solid var(--ciff-border-light);
+  box-shadow: var(--ciff-shadow-sm);
+  transition: box-shadow var(--ciff-duration-normal) var(--ciff-ease-default);
+}
+
+.el-card:hover {
+  box-shadow: var(--ciff-shadow-base);
+}
+
+.el-card__header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ciff-border-light);
+  font-weight: var(--ciff-font-semibold);
+}
+
+/* ============================================================
+ * Empty state overrides
+ * ============================================================ */
+.el-empty__description {
+  font-size: var(--ciff-text-sm);
+  color: var(--ciff-text-tertiary);
+  margin-top: 12px;
+}
+
+/* ============================================================
+ * Message / Notification overrides
+ * ============================================================ */
+.el-message {
+  border-radius: var(--ciff-radius-lg);
+  box-shadow: var(--ciff-shadow-lg);
+  padding: 12px 20px;
+  font-weight: var(--ciff-font-medium);
+}
+
+.el-message--success {
+  background: var(--ciff-success-light);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: var(--ciff-success-dark);
+}
+
+.el-message--error {
+  background: var(--ciff-danger-light);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: var(--ciff-danger-dark);
+}
+
+.el-message--warning {
+  background: var(--ciff-warning-light);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: var(--ciff-warning-dark);
+}
+
+/* ============================================================
+ * Dropdown overrides
+ * ============================================================ */
+.el-dropdown__popper {
+  border-radius: var(--ciff-radius-lg);
+  box-shadow: var(--ciff-shadow-lg);
+  border: 1px solid var(--ciff-border-light);
+}
+
+.el-dropdown-menu {
+  border-radius: var(--ciff-radius-lg);
+  padding: 6px;
+}
+
+.el-dropdown-menu__item {
+  border-radius: var(--ciff-radius-md);
+  padding: 8px 12px;
+  font-size: var(--ciff-text-sm);
+  transition: all var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+
+.el-dropdown-menu__item:hover {
+  background: var(--ciff-primary-50);
+  color: var(--ciff-primary-600);
+}
+
+/* ============================================================
+ * Menu overrides
+ * ============================================================ */
+.el-menu {
+  border-right: none;
+}
+
+/* ============================================================
+ * Breadcrumb overrides
+ * ============================================================ */
+.el-breadcrumb__item {
+  font-size: var(--ciff-text-sm);
+}
+
+.el-breadcrumb__inner {
+  color: var(--ciff-text-secondary);
+  transition: color var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+
+.el-breadcrumb__inner.is-link:hover {
+  color: var(--ciff-primary-500);
+}
+
+.el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--ciff-text-primary);
+  font-weight: var(--ciff-font-semibold);
+}
+
+/* ============================================================
+ * Slider overrides
+ * ============================================================ */
+.el-slider__runway {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ciff-neutral-200);
+}
+
+.el-slider__bar {
+  background: var(--ciff-btn-gradient);
+  border-radius: 3px;
+}
+
+.el-slider__button {
+  border: 2px solid var(--ciff-primary-500);
+  box-shadow: var(--ciff-shadow-sm);
+  transition: transform var(--ciff-duration-fast) var(--ciff-ease-default);
+}
+
+.el-slider__button:hover {
+  transform: scale(1.15);
+}
+
+/* ============================================================
+ * Input Number overrides
+ * ============================================================ */
+.el-input-number .el-input__wrapper {
+  border-radius: var(--ciff-radius-md) !important;
+}
+
+/* ============================================================
+ * Loading overrides
+ * ============================================================ */
+.el-loading-mask {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+/* ============================================================
+ * Popover / Tooltip overrides
+ * ============================================================ */
+.el-popover {
+  border-radius: var(--ciff-radius-lg);
+  box-shadow: var(--ciff-shadow-lg);
+  border: 1px solid var(--ciff-border-light);
+}
+
+.el-popper.is-light {
+  border: 1px solid var(--ciff-border-light);
+  box-shadow: var(--ciff-shadow-lg);
+}
+
+/* ============================================================
+ * MessageBox overrides
+ * ============================================================ */
+.el-message-box {
+  border-radius: var(--ciff-radius-2xl);
+  box-shadow: var(--ciff-shadow-xl);
+  border: 1px solid var(--ciff-border-light);
+}
+
+.el-message-box__header {
+  padding: 20px 24px 12px;
+}
+
+.el-message-box__title {
+  font-family: var(--ciff-font-heading);
+  font-weight: var(--ciff-font-bold);
+  font-size: var(--ciff-text-lg);
+}
+
+.el-message-box__content {
+  padding: 12px 24px;
+  font-size: var(--ciff-text-sm);
+  color: var(--ciff-text-secondary);
+}
+
+.el-message-box__btns {
+  padding: 16px 24px 20px;
 }
 
 /* ============================================================
@@ -180,4 +594,10 @@
   border-radius: var(--ciff-card-radius);
   box-shadow: var(--ciff-card-shadow);
   padding: var(--ciff-card-padding);
+  border: 1px solid var(--ciff-border-light);
+  transition: box-shadow var(--ciff-duration-normal) var(--ciff-ease-default);
+}
+
+.ciff-card:hover {
+  box-shadow: var(--ciff-shadow-base);
 }

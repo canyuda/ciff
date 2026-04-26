@@ -256,7 +256,7 @@ const dialogRef = ref<DialogRef | null>(null)
 const columns: TableColumn[] = [
   { label: '名称', prop: 'name', minWidth: 140 },
   { label: '描述', prop: 'description', minWidth: 200 },
-  { label: '状态', slot: 'status', width: 80, align: 'center' },
+  { label: '状态', slot: 'status', width: 100, align: 'center' },
   { label: '创建时间', prop: 'createTime', width: 170 },
   { label: '操作', slot: 'actions', minWidth: 240, fixed: 'right' },
 ]

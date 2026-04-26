@@ -30,12 +30,14 @@ public class AgentController {
 
     private final AgentService agentService;
 
+    // todo [未被前端使用:待清理]
     @PostMapping
     @Operation(summary = "创建 Agent")
     public Result<AgentVO> create(@Valid @RequestBody AgentCreateRequest request) {
         return Result.ok(agentService.create(request, UserContext.getUserId()));
     }
 
+    // todo [未被前端使用:待清理]
     @PutMapping("/{id}")
     @Operation(summary = "更新 Agent")
     public Result<AgentVO> update(
@@ -44,6 +46,7 @@ public class AgentController {
         return Result.ok(agentService.update(id, request, UserContext.getUserId()));
     }
 
+    // todo [未被前端使用:待清理]
     @GetMapping("/{id}")
     @Operation(summary = "查询 Agent 详情")
     public Result<AgentVO> getById(
@@ -51,6 +54,7 @@ public class AgentController {
         return Result.ok(agentService.getById(id, UserContext.getUserId()));
     }
 
+    // todo [未被前端使用:待清理]
     @DeleteMapping("/{id}")
     @Operation(summary = "删除 Agent")
     public Result<Void> delete(
@@ -59,6 +63,7 @@ public class AgentController {
         return Result.ok();
     }
 
+    // todo [未被前端使用:待清理]
     @GetMapping
     @Operation(summary = "分页查询 Agent 列表")
     public Result<PageResult<AgentVO>> page(

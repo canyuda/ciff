@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "健康检查", description = "服务状态检测")
 public class HealthController {
 
+    // todo [未被前端使用:设计性保留]
     @GetMapping("/api/v1/health")
     @Operation(summary = "健康检查")
     public Result<String> health() {

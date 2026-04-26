@@ -163,6 +163,7 @@ public class AppKnowledgeController {
         return Result.ok();
     }
 
+    // todo [未被前端使用:待清理]
     @PostMapping("/test/chunk")
     @Operation(summary = "文本分片测试（测试用）")
     public Result<List<String>> testChunk(

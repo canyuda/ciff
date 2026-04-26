@@ -110,14 +110,14 @@
         </el-button>
       </div>
 
-      <el-table :data="documents" v-loading="docsLoading" style="width: 100%">
+      <el-table :data="documents" v-loading="docsLoading" style="width: 100%" table-layout="auto">
         <el-table-column prop="fileName" label="文件名" min-width="160" show-overflow-tooltip />
         <el-table-column label="大小" width="100" align="center">
           <template #default="{ row }">
             {{ formatSize(row.fileSize) }}
           </template>
         </el-table-column>
-        <el-table-column prop="chunkCount" label="分块数" width="80" align="center" />
+        <el-table-column prop="chunkCount" label="分块数" width="100" align="center" />
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.status === 'ready'" type="success" size="small">就绪</el-tag>
@@ -190,10 +190,10 @@ const dialogRef = ref<DialogRef | null>(null)
 
 const columns: TableColumn[] = [
   { label: '名称', prop: 'name', minWidth: 160 },
-  { label: '状态', slot: 'status', width: 80, align: 'center' },
-  { label: '文档数', slot: 'docCount', width: 80, align: 'center' },
-  { label: '分块大小', prop: 'chunkSize', width: 90, align: 'center' },
-  { label: 'Embedding 模型', prop: 'embeddingModel', minWidth: 140 },
+  { label: '状态', slot: 'status', width: 100, align: 'center' },
+  { label: '文档数', slot: 'docCount', width: 110, align: 'center' },
+  { label: '分块大小', prop: 'chunkSize', width: 120, align: 'center' },
+  { label: 'Embedding 模型', prop: 'embeddingModel', minWidth: 180 },
   { label: '创建时间', prop: 'createTime', width: 170 },
   { label: '操作', slot: 'actions', minWidth: 180, fixed: 'right' },
 ]

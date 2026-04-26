@@ -7,15 +7,15 @@
     </PageHeader>
 
     <div class="ciff-card">
-      <el-table :data="keys" v-loading="loading" stripe>
+      <el-table :data="keys" v-loading="loading" stripe table-layout="auto">
         <el-table-column prop="name" label="名称" min-width="160" />
         <el-table-column prop="keyPrefix" label="Key 前缀" min-width="180">
           <template #default="{ row }">
             <code class="key-prefix">{{ row.keyPrefix }}****</code>
           </template>
         </el-table-column>
-        <el-table-column prop="agentName" label="关联 Agent" min-width="120" />
-        <el-table-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="agentName" label="关联 Agent" min-width="140" />
+        <el-table-column prop="status" label="状态" width="110" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.status === 'active'" type="success" size="small">启用</el-tag>
             <el-tag v-else type="danger" size="small">已吊销</el-tag>
