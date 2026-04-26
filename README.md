@@ -77,6 +77,12 @@ ciff/
     <td><img src="image/recall-test.png" alt="召回测试" width="100%"></td>
     <td><img src="image/chat.png" alt="对话页面" width="100%"></td>
   </tr>
+  <tr>
+    <td align="center" colspan="2"><b>对话示例 — SSE 流式 + Markdown 渲染</b></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="image/chat_example.png" alt="对话示例" width="100%"></td>
+  </tr>
 </table>
 
 ### 弹窗/表单
