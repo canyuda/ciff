@@ -597,14 +597,14 @@ function formatStepOutput(step: StepResult): string {
 }
 
 .mermaid-container {
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--ciff-border-light);
   border-radius: 4px;
   padding: 16px;
   min-height: 300px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fafafa;
+  background: var(--ciff-bg-secondary);
   overflow: auto;
 }
 
@@ -634,7 +634,7 @@ function formatStepOutput(step: StepResult): string {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--ciff-border-light);
   border-radius: 4px;
   margin-bottom: 8px;
   cursor: pointer;
@@ -642,7 +642,7 @@ function formatStepOutput(step: StepResult): string {
 }
 
 .task-item:hover {
-  background: #f5f7fa;
+  background: var(--ciff-bg-tertiary);
 }
 
 .task-item-main {
@@ -653,18 +653,18 @@ function formatStepOutput(step: StepResult): string {
 }
 
 .task-item-id {
-  color: #606266;
+  color: var(--ciff-text-secondary);
   font-size: 13px;
   font-family: monospace;
 }
 
 .task-item-step {
-  color: #909399;
+  color: var(--ciff-text-tertiary);
   font-size: 12px;
 }
 
 .task-item-time {
-  color: #909399;
+  color: var(--ciff-text-tertiary);
   font-size: 12px;
 }
 
@@ -682,12 +682,12 @@ function formatStepOutput(step: StepResult): string {
 }
 
 .task-detail-progress {
-  color: #606266;
+  color: var(--ciff-text-secondary);
   font-size: 14px;
 }
 
 .task-detail-step {
-  color: #909399;
+  color: var(--ciff-text-tertiary);
   font-size: 13px;
 }
 
@@ -706,21 +706,21 @@ function formatStepOutput(step: StepResult): string {
 
 .task-detail-section h4 {
   margin: 0 0 8px;
-  color: #333;
+  color: var(--ciff-text-primary);
   font-size: 14px;
 }
 
 .task-detail-time {
-  color: #909399;
+  color: var(--ciff-text-tertiary);
   font-size: 12px;
   margin-top: 12px;
   padding-top: 8px;
-  border-top: 1px solid #ebeef5;
+  border-top: 1px solid var(--ciff-border-light);
 }
 
 /* step results */
 .step-result {
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--ciff-border-light);
   border-radius: 4px;
   padding: 12px;
   margin-bottom: 8px;
@@ -734,13 +734,13 @@ function formatStepOutput(step: StepResult): string {
 }
 
 .step-type {
-  color: #909399;
+  color: var(--ciff-text-tertiary);
   font-size: 12px;
 }
 
 .step-output {
-  background: #f5f7fa;
-  color: #333;
+  background: var(--ciff-bg-tertiary);
+  color: var(--ciff-text-primary);
   padding: 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -766,7 +766,7 @@ function formatStepOutput(step: StepResult): string {
 
 .final-output-content {
   background: #fff;
-  color: #333;
+  color: var(--ciff-text-primary);
   border: none;
   padding: 8px;
   white-space: pre-wrap;

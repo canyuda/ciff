@@ -45,8 +45,15 @@
           <div style="display: flex; gap: 8px">
             <el-button link type="primary" @click="handleOpenModels(row)">模型管理</el-button>
             <el-button link type="primary" @click="openEditDialog(row.id)">编辑</el-button>
-            <el-button link type="warning" @click="handleTest(row)">测试</el-button>
-            <el-button link type="danger" @click="handleDelete(row.id)">删除</el-button>
+            <el-dropdown trigger="click">
+              <el-button link type="primary">更多</el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="handleTest(row)">连通测试</el-dropdown-item>
+                  <el-dropdown-item @click="handleDelete(row.id)" style="color: var(--el-color-danger)">删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </template>
       </CiffTable>

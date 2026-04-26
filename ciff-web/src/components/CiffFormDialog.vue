@@ -12,7 +12,7 @@
       ref="formRef"
       :model="currentFormData()"
       :rules="rules"
-      label-width="90px"
+      label-width="100px"
       label-position="right"
     >
       <slot :data="currentFormData()" :is-edit="isEdit" />

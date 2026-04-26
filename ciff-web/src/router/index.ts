@@ -12,7 +12,7 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: '/provider',
+      redirect: '/chat',
     },
     {
       path: '/provider',

@@ -31,7 +31,7 @@ public class AgentServiceImpl implements AgentService {
     private final AgentKnowledgeService agentKnowledgeService;
     private final AgentDetailCacheHelper detailCacheHelper;
 
-    private static final List<String> VALID_TYPES = List.of("chatbot", "agent", "workflow");
+    private static final List<String> VALID_TYPES = List.of("agent", "workflow");
     private static final List<String> VALID_STATUSES = List.of("active", "inactive", "draft");
 
     @Override

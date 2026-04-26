@@ -30,14 +30,14 @@ const route = useRoute()
 const router = useRouter()
 
 const breadcrumbMap: Record<string, string> = {
-  '/provider': 'Providers',
-  '/tool': 'Tools',
-  '/knowledge': 'Knowledge',
-  '/knowledge-documents': 'Documents',
-  '/recall-test': 'Recall Test',
-  '/agent': 'Agents',
-  '/chat': 'Chat',
-  '/workflow': 'Workflows',
+  '/provider': '供应商管理',
+  '/tool': '工具管理',
+  '/knowledge': '知识库管理',
+  '/knowledge-documents': '文档管理',
+  '/recall-test': '召回测试',
+  '/agent': 'Agent 管理',
+  '/chat': '对话',
+  '/workflow': '工作流管理',
   '/api-keys': 'API Key',
 }
 

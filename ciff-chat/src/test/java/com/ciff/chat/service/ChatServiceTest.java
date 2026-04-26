@@ -218,7 +218,7 @@ class ChatServiceTest {
         AgentVO vo = new AgentVO();
         vo.setId(id);
         vo.setName(name);
-        vo.setType("chatbot");
+        vo.setType("agent");
         vo.setModelId(10L);
         vo.setSystemPrompt("You are helpful");
         AgentModelParam params = new AgentModelParam();

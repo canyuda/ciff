@@ -21,7 +21,7 @@ public class AgentVO {
     @Schema(description = "Agent 描述")
     private String description;
 
-    @Schema(description = "Agent 类型：chatbot / agent / workflow")
+    @Schema(description = "Agent 类型：agent / workflow")
     private String type;
 
     @Schema(description = "绑定模型 ID")

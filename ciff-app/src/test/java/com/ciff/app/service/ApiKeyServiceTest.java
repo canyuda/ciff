@@ -1,5 +1,7 @@
 package com.ciff.app.service;
 
+import com.ciff.agent.entity.AgentPO;
+import com.ciff.agent.mapper.AgentMapper;
 import com.ciff.app.dto.apikey.ApiKeyCreateRequest;
 import com.ciff.app.dto.apikey.ApiKeyVO;
 import com.ciff.app.entity.ApiKeyPO;
@@ -31,6 +33,9 @@ class ApiKeyServiceTest {
 
     @Mock
     private ApiKeyMapper apiKeyMapper;
+
+    @Mock
+    private AgentMapper agentMapper;
 
     @Mock
     private UserService userService;
@@ -82,11 +87,18 @@ class ApiKeyServiceTest {
 
         when(apiKeyMapper.selectList(any())).thenReturn(List.of(key1, key2));
 
+        AgentPO agent = new AgentPO();
+        agent.setId(10L);
+        agent.setName("Test Agent");
+        when(agentMapper.selectBatchIds(List.of(10L))).thenReturn(List.of(agent));
+
         List<ApiKeyVO> result = apiKeyService.listKeys();
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getName()).isEqualTo("key-1");
+        assertThat(result.get(0).getAgentName()).isEqualTo("Test Agent");
         assertThat(result.get(1).getName()).isEqualTo("key-2");
+        assertThat(result.get(1).getAgentName()).isEqualTo("Test Agent");
         // listKeys should never expose rawKey
         assertThat(result.stream().noneMatch(vo -> vo.getRawKey() != null)).isTrue();
     }

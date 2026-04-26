@@ -22,10 +22,17 @@
 
         <template #actions="{ row }">
           <div style="display: flex; gap: 8px">
-            <el-button link type="primary" @click="$router.push({ path: '/knowledge-documents', query: { knowledgeId: row.id } })">管理</el-button>
-            <el-button link type="primary" @click="$router.push({ path: '/recall-test', query: { knowledgeId: row.id } })">召回测试</el-button>
             <el-button link type="primary" @click="openEditDialog(row.id)">编辑</el-button>
-            <el-button link type="warning" @click="handleRebuild(row.id)">重建索引</el-button>
+            <el-dropdown trigger="click">
+              <el-button link type="primary">更多</el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="$router.push({ path: '/knowledge-documents', query: { knowledgeId: row.id } })">文档管理</el-dropdown-item>
+                  <el-dropdown-item @click="$router.push({ path: '/recall-test', query: { knowledgeId: row.id } })">召回测试</el-dropdown-item>
+                  <el-dropdown-item @click="handleRebuild(row.id)">重建索引</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <el-button link type="danger" @click="handleDelete(row.id)">删除</el-button>
           </div>
         </template>

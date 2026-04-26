@@ -5,6 +5,8 @@ import com.ciff.app.dto.apikey.ApiKeyCreateRequest;
 import com.ciff.app.dto.apikey.ApiKeyVO;
 import com.ciff.app.entity.ApiKeyPO;
 import com.ciff.app.entity.UserPO;
+import com.ciff.agent.entity.AgentPO;
+import com.ciff.agent.mapper.AgentMapper;
 import com.ciff.app.mapper.ApiKeyMapper;
 import com.ciff.common.context.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,9 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +30,7 @@ public class ApiKeyService {
     private static final int KEY_LENGTH = 32;
 
     private final ApiKeyMapper apiKeyMapper;
+    private final AgentMapper agentMapper;
     private final UserService userService;
 
     public ApiKeyVO createKey(ApiKeyCreateRequest request) {
@@ -52,7 +58,25 @@ public class ApiKeyService {
                         .eq(ApiKeyPO::getUserId, userId)
                         .orderByDesc(ApiKeyPO::getCreateTime)
         );
-        return keys.stream().map(k -> toVO(k, null)).toList();
+
+        // batch lookup agent names
+        List<Long> agentIds = keys.stream()
+                .map(ApiKeyPO::getAgentId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, String> agentNameMap = agentIds.isEmpty()
+                ? Map.of()
+                : agentMapper.selectBatchIds(agentIds).stream()
+                        .collect(Collectors.toMap(AgentPO::getId, AgentPO::getName, (a, b) -> a));
+
+        return keys.stream().map(k -> {
+            ApiKeyVO vo = toVO(k, null);
+            if (k.getAgentId() != null) {
+                vo.setAgentName(agentNameMap.getOrDefault(k.getAgentId(), null));
+            }
+            return vo;
+        }).toList();
     }
 
     public void revokeKey(Long id) {

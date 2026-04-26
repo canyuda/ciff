@@ -70,13 +70,13 @@ class AppAgentControllerTest {
         ModelVO model = buildModelVO(10L, "gpt-4o");
         given(providerFacade.getModelById(10L)).willReturn(model);
 
-        AgentVO agent = buildAgentVO(1L, "test-agent", "chatbot");
+        AgentVO agent = buildAgentVO(1L, "test-agent", "agent");
         given(agentService.create(any(), eq(100L))).willReturn(agent);
 
         String body = """
                 {
                     "name": "test-agent",
-                    "type": "chatbot",
+                    "type": "agent",
                     "modelId": 10,
                     "systemPrompt": "You are helpful"
                 }
@@ -96,7 +96,7 @@ class AppAgentControllerTest {
         String body = """
                 {
                     "name": "test-agent",
-                    "type": "chatbot",
+                    "type": "agent",
                     "modelId": 999,
                     "systemPrompt": "You are helpful"
                 }
@@ -115,7 +115,7 @@ class AppAgentControllerTest {
         ModelVO model = buildModelVO(20L, "claude-3");
         given(providerFacade.getModelById(20L)).willReturn(model);
 
-        AgentVO agent = buildAgentVO(1L, "updated", "chatbot");
+        AgentVO agent = buildAgentVO(1L, "updated", "agent");
         agent.setModelId(20L);
         given(agentService.update(eq(1L), any(), eq(100L))).willReturn(agent);
 
@@ -134,7 +134,7 @@ class AppAgentControllerTest {
 
     @Test
     void getById_shouldEnrichModelName() throws Exception {
-        AgentVO agent = buildAgentVO(1L, "test-agent", "chatbot");
+        AgentVO agent = buildAgentVO(1L, "test-agent", "agent");
         agent.setModelId(10L);
         given(agentService.getById(1L, 100L)).willReturn(agent);
         given(providerFacade.getModelById(10L)).willReturn(buildModelVO(10L, "gpt-4o"));
@@ -155,7 +155,7 @@ class AppAgentControllerTest {
 
     @Test
     void page_shouldReturnPageResult() throws Exception {
-        AgentVO agent = buildAgentVO(1L, "agent-1", "chatbot");
+        AgentVO agent = buildAgentVO(1L, "agent-1", "agent");
         agent.setModelId(10L);
         PageResult<AgentVO> pageResult = new PageResult<>(List.of(agent), 1L, 1, 20);
         given(agentService.page(any(), any(), any(), any(), eq(100L))).willReturn(pageResult);

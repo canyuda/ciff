@@ -22,7 +22,7 @@ public class AgentCreateRequest {
     private String description;
 
     @NotBlank(message = "类型不能为空")
-    @Schema(description = "Agent 类型：chatbot / agent / workflow", example = "chatbot")
+    @Schema(description = "Agent 类型：agent / workflow", example = "agent")
     private String type;
 
     @NotNull(message = "模型ID不能为空")
@@ -32,7 +32,6 @@ public class AgentCreateRequest {
     @Schema(description = "工作流 ID（workflow 类型必填）")
     private Long workflowId;
 
-    @NotBlank(message = "系统提示词不能为空")
     @Schema(description = "系统提示词")
     private String systemPrompt;
 

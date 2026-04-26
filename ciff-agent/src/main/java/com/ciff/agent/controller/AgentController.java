@@ -64,7 +64,7 @@ public class AgentController {
     public Result<PageResult<AgentVO>> page(
             @Parameter(description = "页码，从1开始") @RequestParam(required = false) Integer page,
             @Parameter(description = "每页条数，最大100") @RequestParam(required = false) Integer pageSize,
-            @Parameter(description = "类型筛选: chatbot / agent / workflow") @RequestParam(required = false) String type,
+            @Parameter(description = "类型筛选: agent / workflow") @RequestParam(required = false) String type,
             @Parameter(description = "状态筛选: active / inactive / draft") @RequestParam(required = false) String status) {
         return Result.ok(agentService.page(page, pageSize, type, status, UserContext.getUserId()));
     }

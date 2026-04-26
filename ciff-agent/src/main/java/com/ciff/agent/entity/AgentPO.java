@@ -23,7 +23,7 @@ public class AgentPO extends SoftDeletableEntity {
 
     private String description;
 
-    /** chatbot / agent / workflow */
+    /** agent / workflow */
     private String type;
 
     private String systemPrompt;

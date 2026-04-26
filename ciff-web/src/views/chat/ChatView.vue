@@ -48,11 +48,12 @@
 
         <div v-for="msg in messages" :key="msg.id" :class="['message-row', msg.role]">
           <div class="message-avatar">
-            <el-avatar v-if="msg.role === 'assistant'" :size="32" :icon="UserFilled" />
+            <el-avatar v-if="msg.role === 'assistant'" :size="32" :icon="Service" />
             <el-avatar v-else :size="32" :icon="User" />
           </div>
           <div class="message-bubble">
-            <div class="message-content">{{ msg.content }}</div>
+            <div v-if="msg.role === 'assistant'" class="message-content markdown-body" v-html="renderMarkdown(msg.content)"></div>
+            <div v-else class="message-content">{{ msg.content }}</div>
             <div class="message-meta">
               <template v-if="msg.role === 'assistant'">
                 <span v-if="msg.modelName" class="model-tag">{{ msg.modelName }}</span>
@@ -69,7 +70,7 @@
         <!-- Streaming temporary message -->
         <div v-if="isStreaming" class="message-row assistant">
           <div class="message-avatar">
-            <el-avatar :size="32" :icon="UserFilled" />
+            <el-avatar :size="32" :icon="Service" />
           </div>
           <div class="message-bubble streaming">
             <div class="message-content">{{ streamingContent }}</div>
@@ -85,21 +86,28 @@
 
       <!-- Input area -->
       <div class="input-area">
-        <div class="input-toolbar" v-if="currentAgent">
-          <span class="toolbar-label">RAG 模式</span>
-          <el-select v-model="ragMode" size="small" style="width: 160px">
-            <el-option label="RAG + 精排" value="RAG_WITH_RERANKER" />
-            <el-option label="RAG" value="RAG_WITHOUT_RERANKER" />
-            <el-option label="关闭 RAG" value="NO_RAG" />
-          </el-select>
+        <div v-if="!currentAgent" class="input-placeholder">
+          <el-button type="primary" @click="openAgentSelector">
+            <el-icon><Plus /></el-icon>
+            选择 Agent 开始新会话
+          </el-button>
         </div>
-        <div class="input-wrapper">
-          <el-input
-            v-model="inputMessage"
-            type="textarea"
-            :rows="3"
-            placeholder="输入消息，Shift + Enter 换行，Enter 发送"
-            :disabled="isStreaming"
+        <template v-else>
+          <div class="input-toolbar">
+            <span class="toolbar-label">RAG 模式</span>
+            <el-select v-model="ragMode" size="small" style="width: 160px">
+              <el-option label="RAG + 精排" value="RAG_WITH_RERANKER" />
+              <el-option label="RAG" value="RAG_WITHOUT_RERANKER" />
+              <el-option label="关闭 RAG" value="NO_RAG" />
+            </el-select>
+          </div>
+          <div class="input-wrapper">
+            <el-input
+              v-model="inputMessage"
+              type="textarea"
+              :rows="3"
+              placeholder="输入消息，Shift + Enter 换行，Enter 发送"
+              :disabled="isStreaming"
             resize="none"
             @keydown="handleKeydown"
           />
@@ -123,6 +131,7 @@
             </el-button>
           </div>
         </div>
+        </template>
       </div>
     </main>
 
@@ -161,9 +170,10 @@ import {
   VideoPause,
   Loading,
   User,
-  UserFilled,
+  Service,
   Document,
 } from '@element-plus/icons-vue'
+import { renderMarkdown } from '@/utils/markdown'
 import {
   getConversations,
   deleteConversation,
@@ -195,7 +205,9 @@ let streamController: AbortController | null = null
 
 // ========== Lifecycle ==========
 onMounted(async () => {
-  await Promise.all([loadConversations(), loadAgents()])
+  // agents must load first — selectConversation needs agentList to set currentAgent
+  await loadAgents()
+  await loadConversations()
 })
 
 // ========== Data loading ==========
@@ -203,9 +215,9 @@ async function loadConversations() {
   try {
     const res = await getConversations({ page: 1, pageSize: 50 })
     conversations.value = res.list
-    // Auto-select first conversation if none selected
+    // Auto-select last (most recent) conversation if none selected
     if (conversations.value.length > 0 && !currentConversationId.value) {
-      selectConversation(conversations.value[0].id)
+      selectConversation(conversations.value[conversations.value.length - 1].id)
     }
   } catch {
     // silently fail, keep existing list
@@ -485,16 +497,20 @@ function formatTime(iso: string): string {
   top: 50%;
   right: 8px;
   transform: translateY(-50%);
-  opacity: 1;
+  opacity: 0;
   transition: all 0.2s;
-  color: #6b7280;
+  color: var(--ciff-text-tertiary);
   cursor: pointer;
   padding: 6px;
   font-size: 18px;
   border-radius: 6px;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
+  background: var(--ciff-bg-primary);
+  border: 1px solid var(--ciff-border-light);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.conversation-item:hover .delete-btn {
+  opacity: 1;
 }
 
 .delete-btn:hover {
@@ -538,7 +554,19 @@ function formatTime(iso: string): string {
 .message-list {
   flex: 1;
   overflow: auto;
-  padding: 24px;
+  padding: 24px 16px;
+}
+
+.message-list :deep(.el-scrollbar__wrap) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.message-list :deep(.el-scrollbar__view) {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .empty-state {
@@ -550,8 +578,8 @@ function formatTime(iso: string): string {
 
 .message-row {
   display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 12px;
   max-width: 85%;
 }
 
@@ -582,16 +610,89 @@ function formatTime(iso: string): string {
 }
 
 .message-row.assistant .message-bubble {
-  background: var(--ciff-bg-tertiary);
+  background: var(--ciff-bg-card);
   color: var(--ciff-text-primary);
-  border: 1px solid var(--ciff-border-light);
+  border: 1px solid var(--ciff-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   border-bottom-left-radius: 4px;
 }
 
 .message-content {
   font-size: 14px;
-  line-height: 1.6;
-  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.markdown-body :deep(p) {
+  margin: 0 0 4px;
+}
+
+.markdown-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown-body :deep(pre.hljs) {
+  background: var(--ciff-bg-primary);
+  border: 1px solid var(--ciff-border-light);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.markdown-body :deep(code) {
+  font-family: var(--ciff-font-mono);
+  font-size: 13px;
+}
+
+.markdown-body :deep(:not(pre) > code) {
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--ciff-primary-600);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+.markdown-body :deep(blockquote) {
+  border-left: 3px solid var(--ciff-primary-300);
+  padding-left: 12px;
+  margin: 8px 0;
+  color: var(--ciff-text-tertiary);
+}
+
+.markdown-body :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.markdown-body :deep(th),
+.markdown-body :deep(td) {
+  border: 1px solid var(--ciff-border-light);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.markdown-body :deep(th) {
+  background: var(--ciff-bg-secondary);
+  font-weight: 600;
+}
+
+.markdown-body :deep(a) {
+  color: var(--ciff-primary-500);
+  text-decoration: none;
+}
+
+.markdown-body :deep(a:hover) {
+  text-decoration: underline;
 }
 
 .message-meta {
@@ -643,6 +744,12 @@ function formatTime(iso: string): string {
   padding: 16px 24px;
   border-top: 1px solid var(--ciff-border-light);
   background: var(--ciff-bg-secondary);
+}
+
+.input-placeholder {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
 }
 
 .input-toolbar {

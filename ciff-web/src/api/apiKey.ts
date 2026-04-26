@@ -5,6 +5,7 @@ export interface ApiKeyVO {
   name: string
   keyPrefix: string
   agentId: number
+  agentName?: string
   status: string
   expiresAt: string | null
   createTime: string

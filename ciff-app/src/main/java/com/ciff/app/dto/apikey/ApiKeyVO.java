@@ -11,6 +11,7 @@ public class ApiKeyVO {
     private String name;
     private String keyPrefix;
     private Long agentId;
+    private String agentName;
     private String status;
     private LocalDateTime expiresAt;
     private LocalDateTime createTime;

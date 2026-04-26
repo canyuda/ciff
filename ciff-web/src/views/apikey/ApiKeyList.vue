@@ -8,35 +8,35 @@
 
     <div class="ciff-card">
       <el-table :data="keys" v-loading="loading" stripe>
-        <el-table-column prop="name" label="名称" min-width="120" />
-        <el-table-column prop="keyPrefix" label="Key 前缀" width="160">
+        <el-table-column prop="name" label="名称" min-width="160" />
+        <el-table-column prop="keyPrefix" label="Key 前缀" min-width="180">
           <template #default="{ row }">
             <code class="key-prefix">{{ row.keyPrefix }}****</code>
           </template>
         </el-table-column>
-        <el-table-column prop="agentId" label="关联 Agent" width="120" />
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="agentName" label="关联 Agent" min-width="120" />
+        <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.status === 'active'" type="success" size="small">Active</el-tag>
-            <el-tag v-else type="danger" size="small">Revoked</el-tag>
+            <el-tag v-if="row.status === 'active'" type="success" size="small">启用</el-tag>
+            <el-tag v-else type="danger" size="small">已吊销</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="expiresAt" label="过期时间" width="180">
+        <el-table-column prop="expiresAt" label="过期时间" width="170">
           <template #default="{ row }">
             <span v-if="row.expiresAt">{{ row.expiresAt }}</span>
-            <span v-else class="text-muted">Never</span>
+            <span v-else class="text-muted">永不过期</span>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="180" />
-        <el-table-column label="Actions" width="120" fixed="right">
+        <el-table-column prop="createTime" label="创建时间" width="170" />
+        <el-table-column label="操作" width="100" fixed="right" align="center">
           <template #default="{ row }">
             <el-popconfirm
               v-if="row.status === 'active'"
-              title="Are you sure to revoke this API key?"
+              title="确定要吊销该 API Key 吗？吊销后不可恢复。"
               @confirm="handleRevoke(row.id)"
             >
               <template #reference>
-                <el-button link type="danger" size="small">Revoke</el-button>
+                <el-button link type="danger" size="small">吊销</el-button>
               </template>
             </el-popconfirm>
             <span v-else class="text-muted">-</span>
@@ -46,13 +46,13 @@
     </div>
 
     <!-- Create Dialog -->
-    <el-dialog v-model="dialogVisible" title="Create API Key" width="480px" destroy-on-close>
+    <el-dialog v-model="dialogVisible" title="创建 API Key" width="480px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
-        <el-form-item label="Name" prop="name">
-          <el-input v-model="form.name" placeholder="API key name" />
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="form.name" placeholder="API Key 名称" />
         </el-form-item>
-        <el-form-item label="Agent" prop="agentId">
-          <el-select v-model="form.agentId" placeholder="Select agent" style="width: 100%">
+        <el-form-item label="关联 Agent" prop="agentId">
+          <el-select v-model="form.agentId" placeholder="请选择 Agent" style="width: 100%">
             <el-option
               v-for="agent in agents"
               :key="agent.id"
@@ -61,36 +61,36 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="Expires At">
+        <el-form-item label="过期时间">
           <el-date-picker
             v-model="form.expiresAt"
             type="datetime"
-            placeholder="Optional"
+            placeholder="可选，留空表示永不过期"
             style="width: 100%"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">Cancel</el-button>
-        <el-button type="primary" :loading="creating" @click="handleCreate">Create</el-button>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="creating" @click="handleCreate">创建</el-button>
       </template>
     </el-dialog>
 
     <!-- Show Key Dialog -->
-    <el-dialog v-model="showKeyVisible" title="API Key Created" width="520px" :close-on-click-modal="false">
+    <el-dialog v-model="showKeyVisible" title="API Key 已创建" width="520px" :close-on-click-modal="false">
       <el-alert
         type="warning"
-        title="Please copy the API key now. It will not be shown again."
+        title="请立即复制 API Key，关闭后将无法再次查看。"
         :closable="false"
         show-icon
         style="margin-bottom: 16px"
       />
       <div class="raw-key-box">
         <code class="raw-key">{{ createdKey }}</code>
-        <el-button size="small" @click="copyKey">Copy</el-button>
+        <el-button size="small" @click="copyKey">复制</el-button>
       </div>
       <template #footer>
-        <el-button type="primary" @click="showKeyVisible = false">I've copied the key</el-button>
+        <el-button type="primary" @click="showKeyVisible = false">我已复制</el-button>
       </template>
     </el-dialog>
   </div>
@@ -121,8 +121,8 @@ const form = reactive({
 })
 
 const rules: FormRules = {
-  name: [{ required: true, message: 'Name is required', trigger: 'blur' }],
-  agentId: [{ required: true, message: 'Agent is required', trigger: 'change' }],
+  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+  agentId: [{ required: true, message: '请选择 Agent', trigger: 'change' }],
 }
 
 async function fetchKeys() {
@@ -172,13 +172,13 @@ async function handleCreate() {
 
 async function handleRevoke(id: number) {
   await revokeApiKey(id)
-  ElMessage.success('API key revoked')
+  ElMessage.success('已吊销')
   await fetchKeys()
 }
 
 function copyKey() {
   navigator.clipboard.writeText(createdKey.value)
-  ElMessage.success('Copied to clipboard')
+  ElMessage.success('已复制到剪贴板')
 }
 
 onMounted(() => {

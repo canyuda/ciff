@@ -9,8 +9,7 @@
     <div class="ciff-card">
       <CiffTable ref="tableRef" :columns="columns" :api="fetchAgents">
         <template #type="{ row }">
-          <el-tag v-if="row.type === 'chatbot'" type="primary" size="small" effect="plain">Chatbot</el-tag>
-          <el-tag v-else-if="row.type === 'agent'" type="success" size="small" effect="plain">Agent</el-tag>
+          <el-tag v-if="row.type === 'agent'" type="success" size="small" effect="plain">Agent</el-tag>
           <el-tag v-else-if="row.type === 'workflow'" type="warning" size="small" effect="plain">Workflow</el-tag>
           <el-tag v-else size="small">{{ row.type }}</el-tag>
         </template>
@@ -51,8 +50,7 @@
         </el-form-item>
         <el-form-item label="类型" prop="type">
           <el-select v-model="data.type" placeholder="请选择 Agent 类型" style="width: 100%" :disabled="isEdit">
-            <el-option label="Chatbot（纯对话）" value="chatbot" />
-            <el-option label="Agent（工具调用）" value="agent" />
+            <el-option label="Agent（智能助手）" value="agent" />
             <el-option label="Workflow（工作流）" value="workflow" />
           </el-select>
         </el-form-item>
@@ -66,7 +64,17 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="系统提示词" prop="systemPrompt">
+        <el-form-item v-if="data.type === 'workflow'" label="关联工作流" :prop="data.type === 'workflow' ? 'workflowId' : ''">
+          <el-select v-model="data.workflowId" placeholder="请选择工作流" style="width: 100%">
+            <el-option
+              v-for="w in workflowOptions"
+              :key="w.id"
+              :label="w.name"
+              :value="w.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="data.type !== 'workflow'" label="系统提示词" prop="systemPrompt">
           <el-input
             v-model="data.systemPrompt"
             type="textarea"
@@ -116,7 +124,7 @@
         <el-form-item label="描述" prop="description">
           <el-input v-model="data.description" placeholder="Agent 功能描述" />
         </el-form-item>
-        <el-form-item label="绑定工具" prop="toolIds">
+        <el-form-item v-if="data.type !== 'workflow'" label="绑定工具" prop="toolIds">
           <el-select v-model="data.toolIds" multiple placeholder="选择工具" style="width: 100%">
             <el-option
               v-for="t in toolOptions"
@@ -131,7 +139,7 @@
             </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="绑定知识库" prop="knowledgeIds">
+        <el-form-item v-if="data.type !== 'workflow'" label="绑定知识库" prop="knowledgeIds">
           <el-select v-model="data.knowledgeIds" multiple placeholder="选择知识库" style="width: 100%">
             <el-option
               v-for="k in knowledgeOptions"
@@ -173,6 +181,7 @@ import {
 import { getModels, type ModelVO } from '@/api/model'
 import { getTools, type ToolVO } from '@/api/tool'
 import { getKnowledgeList, type KnowledgeVO } from '@/api/knowledge'
+import { getWorkflows, type WorkflowVO } from '@/api/workflow'
 import type { TableColumn, PageParams } from '@/types/common'
 import type { FormRules } from 'element-plus'
 
@@ -191,6 +200,7 @@ interface AgentForm {
   type: string
   modelId?: number
   systemPrompt: string
+  workflowId?: number
   modelParams?: AgentModelParam
   toolIds?: number[]
   knowledgeIds?: number[]
@@ -201,6 +211,7 @@ const dialogRef = ref<DialogRef | null>(null)
 const modelOptions = ref<ModelVO[]>([])
 const toolOptions = ref<ToolVO[]>([])
 const knowledgeOptions = ref<KnowledgeVO[]>([])
+const workflowOptions = ref<WorkflowVO[]>([])
 
 const columns: TableColumn[] = [
   { label: '名称', prop: 'name', minWidth: 140 },
@@ -217,7 +228,7 @@ const rules: FormRules = {
   name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
   type: [{ required: true, message: '请选择类型', trigger: 'change' }],
   modelId: [{ required: true, message: '请选择模型', trigger: 'change' }],
-  systemPrompt: [{ required: true, message: '请输入系统提示词', trigger: 'blur' }],
+  workflowId: [{ required: true, message: '请选择关联工作流', trigger: 'change' }],
 }
 
 onMounted(async () => {
@@ -226,14 +237,16 @@ onMounted(async () => {
 
 async function loadOptions() {
   try {
-    const [modelsRes, toolsRes, knowledgeRes] = await Promise.all([
+    const [modelsRes, toolsRes, knowledgeRes, workflowsRes] = await Promise.all([
       getModels({ page: 1, pageSize: 100 }),
       getTools({ page: 1, pageSize: 100 }),
       getKnowledgeList({ page: 1, pageSize: 100 }),
+      getWorkflows({ page: 1, pageSize: 100 }),
     ])
     modelOptions.value = modelsRes.list
     toolOptions.value = toolsRes.list
     knowledgeOptions.value = knowledgeRes.list
+    workflowOptions.value = workflowsRes.list
   } catch {
     // options load failure should not block page
   }
@@ -245,7 +258,7 @@ async function fetchAgents(params: PageParams) {
 
 function openCreateDialog() {
   dialogRef.value?.open({
-    type: 'chatbot',
+    type: 'agent',
     modelParams: { ...DEFAULT_MODEL_PARAMS },
   } as Partial<AgentForm>)
 }
@@ -260,6 +273,7 @@ async function openEditDialog(id?: number) {
     type: detail.type,
     modelId: detail.modelId,
     systemPrompt: detail.systemPrompt,
+    workflowId: detail.workflowId,
     modelParams: {
       temperature: detail.modelParams?.temperature ?? DEFAULT_MODEL_PARAMS.temperature!,
       maxTokens: detail.modelParams?.maxTokens ?? DEFAULT_MODEL_PARAMS.maxTokens!,
@@ -288,10 +302,11 @@ async function handleSubmit(form: AgentForm) {
       description: form.description,
       type: form.type,
       modelId: form.modelId,
-      systemPrompt: form.systemPrompt,
+      systemPrompt: form.systemPrompt || undefined,
+      workflowId: form.type === 'workflow' ? form.workflowId : undefined,
       modelParams: modelParams ?? null,
-      toolIds: form.toolIds,
-      knowledgeIds: form.knowledgeIds,
+      toolIds: form.type !== 'workflow' ? form.toolIds : undefined,
+      knowledgeIds: form.type !== 'workflow' ? form.knowledgeIds : undefined,
     }
     await updateAgent(form.id, payload)
     notifySuccess('更新成功')
@@ -301,10 +316,11 @@ async function handleSubmit(form: AgentForm) {
       description: form.description,
       type: form.type,
       modelId: form.modelId!,
-      systemPrompt: form.systemPrompt,
+      systemPrompt: form.systemPrompt || undefined,
+      workflowId: form.type === 'workflow' ? form.workflowId : undefined,
       modelParams: modelParams ?? null,
-      toolIds: form.toolIds,
-      knowledgeIds: form.knowledgeIds,
+      toolIds: form.type !== 'workflow' ? form.toolIds : undefined,
+      knowledgeIds: form.type !== 'workflow' ? form.knowledgeIds : undefined,
     }
     await createAgent(payload)
     notifySuccess('创建成功')

@@ -1,4 +1,5 @@
 import { get, post, del } from '@/utils/request'
+import { getToken } from '@/utils/auth'
 import type { PageResult } from '@/types/common'
 
 export interface ConversationVO {
@@ -116,11 +117,13 @@ export function streamChat(
 ): AbortController {
   const controller = new AbortController()
 
+  const token = getToken()
+
   fetch('/api/v1/app/chat/stream', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-User-Id': '1',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(data),
     signal: controller.signal,
