@@ -1,4 +1,4 @@
-# Ciff
+# Ciff-DEMO
 
 > **C**ode **I**t **F**or **F**uture
 
