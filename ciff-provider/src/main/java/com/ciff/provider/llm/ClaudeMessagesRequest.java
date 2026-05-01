@@ -23,4 +23,6 @@ public class ClaudeMessagesRequest {
     private Double temperature;
     private String system;
     private List<LlmChatRequest.Message> messages;
+    /** Claude tool format: [{name, description, input_schema}]. */
+    private List<Object> tools;
 }

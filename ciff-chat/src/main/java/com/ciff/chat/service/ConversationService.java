@@ -13,5 +13,5 @@ public interface ConversationService {
 
     void delete(Long id, Long userId);
 
-    void updateTitle(Long id, String title);
+    void updateTitle(Long id, String title, Long userId);
 }

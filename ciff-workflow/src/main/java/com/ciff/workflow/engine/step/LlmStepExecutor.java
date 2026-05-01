@@ -29,7 +29,14 @@ public class LlmStepExecutor implements StepExecutor {
     @Override
     public StepResult execute(StepDefinition step, WorkflowContext context) {
         Map<String, Object> config = step.getConfig();
-        Long modelId = toLong(config.get("modelId"));
+        Object modelIdRaw = config.get("modelId");
+        if (modelIdRaw == null) {
+            return StepResult.builder()
+                    .stepId(step.getId()).stepName(step.getName()).type(step.getType())
+                    .success(false).error("LLM step missing required config: modelId")
+                    .build();
+        }
+        Long modelId = toLong(modelIdRaw);
         String systemPrompt = context.interpolate((String) config.getOrDefault("systemPrompt", ""));
         String userPrompt = context.interpolate((String) config.getOrDefault("userPrompt", ""));
 

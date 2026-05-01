@@ -7,9 +7,11 @@ import com.ciff.common.util.JsonUtil;
 import com.ciff.provider.dto.ProviderAuthConfig;
 import com.ciff.provider.entity.ProviderPO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -18,6 +20,7 @@ import java.util.function.Consumer;
  * Claude Messages API 客户端。
  * 使用 /v1/messages 接口，请求/响应格式与 OpenAI 不同。
  */
+@Slf4j
 @RequiredArgsConstructor
 public class ClaudeClient implements LlmChatClient {
 
@@ -47,14 +50,61 @@ public class ClaudeClient implements LlmChatClient {
 
     @Override
     public void streamChat(LlmChatRequest request, Consumer<String> callback) {
+        streamChat(request, new StreamCallback() {
+            @Override
+            public void onToken(String content) {
+                callback.accept(content);
+            }
+        });
+    }
+
+    @Override
+    public void streamChat(LlmChatRequest request, StreamCallback callback) {
         String url = buildUrl();
         Map<String, String> headers = buildHeaders();
         String body = buildRequestBody(request, true);
 
+        // Accumulate tool use across streaming chunks
+        String[] currentToolId = {null};
+        String[] currentToolName = {null};
+        StringBuilder currentToolArgs = new StringBuilder();
+
         httpClient.stream(provider.getName(), url, headers, body, chunk -> {
-            String content = parseStreamChunk(chunk);
-            if (content != null) {
-                callback.accept(content);
+            try {
+                ClaudeSseChunk sse = JsonUtil.fromJson(chunk, ClaudeSseChunk.class);
+                if (sse == null) return;
+
+                switch (sse.getType()) {
+                    case "content_block_start" -> {
+                        if (sse.getContentBlock() != null && "tool_use".equals(sse.getContentBlock().getType())) {
+                            currentToolId[0] = sse.getContentBlock().getId();
+                            currentToolName[0] = sse.getContentBlock().getName();
+                            currentToolArgs.setLength(0);
+                        }
+                    }
+                    case "content_block_delta" -> {
+                        if (sse.getDelta() != null) {
+                            if ("text_delta".equals(sse.getDelta().getType()) && sse.getDelta().getText() != null) {
+                                callback.onToken(sse.getDelta().getText());
+                            } else if ("input_json_delta".equals(sse.getDelta().getType())
+                                    && sse.getDelta().getPartialJson() != null) {
+                                currentToolArgs.append(sse.getDelta().getPartialJson());
+                            }
+                        }
+                    }
+                    case "content_block_stop" -> {
+                        if (currentToolId[0] != null && currentToolName[0] != null) {
+                            String args = currentToolArgs.isEmpty() ? "{}" : currentToolArgs.toString();
+                            callback.onToolCall(currentToolId[0], currentToolName[0], args);
+                            currentToolId[0] = null;
+                            currentToolName[0] = null;
+                            currentToolArgs.setLength(0);
+                        }
+                    }
+                    default -> { /* message_start, message_delta, ping, etc. */ }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse Claude SSE chunk: {}", chunk, e);
             }
         });
     }
@@ -109,6 +159,18 @@ public class ClaudeClient implements LlmChatClient {
             }
         }
 
+        // Convert OpenAI tool format to Claude format: {name, description, input_schema}
+        List<Object> claudeTools = null;
+        if (request.getTools() != null && !request.getTools().isEmpty()) {
+            claudeTools = request.getTools().stream().map(td -> {
+                Map<String, Object> tool = new LinkedHashMap<>();
+                tool.put("name", td.getFunction().getName());
+                tool.put("description", td.getFunction().getDescription());
+                tool.put("input_schema", td.getFunction().getParameters());
+                return (Object) tool;
+            }).toList();
+        }
+
         ClaudeMessagesRequest body = ClaudeMessagesRequest.builder()
                 .model(request.getModelName())
                 .stream(stream)
@@ -116,6 +178,7 @@ public class ClaudeClient implements LlmChatClient {
                 .temperature(request.getTemperature())
                 .system(systemContent.isEmpty() ? null : systemContent.toString())
                 .messages(chatMessages)
+                .tools(claudeTools)
                 .build();
         return JsonUtil.toJsonSnakeCase(body);
     }
@@ -177,24 +240,6 @@ public class ClaudeClient implements LlmChatClient {
         }
     }
 
-    /**
-     * 解析 Claude SSE 流式 chunk。
-     * Claude 格式:
-     * - content_block_delta: {"type":"content_block_delta","delta":{"type":"text_delta","text":"xxx"}}
-     */
-    private String parseStreamChunk(String chunk) {
-        try {
-            ClaudeSseChunk sse = JsonUtil.fromJson(chunk, ClaudeSseChunk.class);
-            if ("content_block_delta".equals(sse.getType()) && sse.getDelta() != null) {
-                if ("text_delta".equals(sse.getDelta().getType())) {
-                    return sse.getDelta().getText();
-                }
-            }
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
 
     private static String normalizeBaseUrl(String baseUrl) {
         if (baseUrl.endsWith("/")) {

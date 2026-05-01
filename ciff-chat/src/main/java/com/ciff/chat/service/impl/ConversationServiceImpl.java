@@ -14,6 +14,8 @@ import com.ciff.common.util.PageHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
+
 @Service
 @RequiredArgsConstructor
 public class ConversationServiceImpl implements ConversationService {
@@ -34,7 +36,7 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     public ConversationVO getById(Long id, Long userId) {
         ConversationPO po = requireExists(id);
-        if (!po.getUserId().equals(userId)) {
+        if (!Objects.equals(userId, po.getUserId())) {
             throw new BizException(ErrorCode.FORBIDDEN, "无权访问该会话");
         }
         return ConversationConvertor.toVO(po);
@@ -58,7 +60,7 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     public void delete(Long id, Long userId) {
         ConversationPO po = requireExists(id);
-        if (!po.getUserId().equals(userId)) {
+        if (!Objects.equals(userId, po.getUserId())) {
             throw new BizException(ErrorCode.FORBIDDEN, "无权删除该会话");
         }
         po.setStatus("archived");
@@ -66,9 +68,11 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    public void updateTitle(Long id, String title) {
-        ConversationPO po = new ConversationPO();
-        po.setId(id);
+    public void updateTitle(Long id, String title, Long userId) {
+        ConversationPO po = requireExists(id);
+        if (!Objects.equals(userId, po.getUserId())) {
+            throw new BizException(ErrorCode.FORBIDDEN, "无权修改该会话");
+        }
         po.setTitle(title);
         conversationMapper.updateById(po);
     }

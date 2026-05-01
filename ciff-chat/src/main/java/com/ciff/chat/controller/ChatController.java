@@ -43,8 +43,8 @@ public class ChatController {
     @Operation(summary = "删除会话（级联删除消息）")
     public Result<Void> delete(
             @Parameter(description = "会话 ID") @PathVariable Long id) {
-        chatMessageService.deleteByConversationId(id);
         conversationService.delete(id, UserContext.getUserId());
+        chatMessageService.deleteByConversationId(id);
         return Result.ok();
     }
 
@@ -53,7 +53,7 @@ public class ChatController {
     public Result<Void> updateTitle(
             @Parameter(description = "会话 ID") @PathVariable Long id,
             @Parameter(description = "新标题") @RequestParam String title) {
-        conversationService.updateTitle(id, title);
+        conversationService.updateTitle(id, title, UserContext.getUserId());
         return Result.ok();
     }
 
@@ -63,6 +63,7 @@ public class ChatController {
             @Parameter(description = "会话 ID") @PathVariable Long conversationId,
             @Parameter(description = "页码") @RequestParam(required = false) Integer page,
             @Parameter(description = "每页条数") @RequestParam(required = false) Integer pageSize) {
+        conversationService.getById(conversationId, UserContext.getUserId());
         return Result.ok(chatMessageService.page(conversationId, page, pageSize));
     }
 }

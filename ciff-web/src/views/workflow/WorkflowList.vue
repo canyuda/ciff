@@ -127,8 +127,15 @@
           <div class="task-item-main">
             <el-tag :type="statusTagType(task.status)" size="small">{{ statusLabel(task.status) }}</el-tag>
             <span class="task-item-id">{{ task.taskId.substring(0, 8) }}</span>
-            <span v-if="task.currentStepName" class="task-item-step">
-              {{ task.completedSteps }}/{{ task.totalSteps }} {{ task.currentStepName }}
+            <span v-if="task.status === 'STARTED' || task.status === 'RUNNING'" class="task-item-step">
+              <el-icon class="is-loading" :size="12"><Loading /></el-icon>
+              {{ task.currentStepName || '执行中' }}
+            </span>
+            <span v-else-if="task.status === 'SUCCESS'" class="task-item-step task-item-success">
+              {{ task.completedSteps }} 步
+            </span>
+            <span v-else class="task-item-step task-item-fail">
+              {{ task.currentStepName ? '失败于 ' + task.currentStepName : '失败' }}
             </span>
           </div>
           <div class="task-item-time">
@@ -147,11 +154,17 @@
       <div v-else-if="taskDetail" class="task-detail">
         <div class="task-detail-header">
           <el-tag :type="statusTagType(taskDetail.status)" size="default">{{ statusLabel(taskDetail.status) }}</el-tag>
-          <span class="task-detail-progress">
-            进度: {{ taskDetail.completedSteps }}/{{ taskDetail.totalSteps }}
+          <span v-if="taskDetail.status === 'STARTED' || taskDetail.status === 'RUNNING'" class="task-detail-progress">
+            <el-icon class="is-loading" :size="14"><Loading /></el-icon>
+            <span>{{ taskDetail.currentStepName || '执行中' }}</span>
           </span>
-          <span v-if="taskDetail.currentStepName" class="task-detail-step">
-            当前: {{ taskDetail.currentStepName }}
+          <span v-else-if="taskDetail.status === 'SUCCESS'" class="task-detail-progress task-detail-success">
+            <el-icon :size="14"><CircleCheck /></el-icon>
+            <span>已完成 ({{ taskDetail.completedSteps }} 步)</span>
+          </span>
+          <span v-else class="task-detail-progress task-detail-fail">
+            <el-icon :size="14"><CircleClose /></el-icon>
+            <span>{{ taskDetail.currentStepName ? '失败于 ' + taskDetail.currentStepName : '执行失败' }}</span>
           </span>
         </div>
 
@@ -201,7 +214,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { Plus, Loading } from '@element-plus/icons-vue'
+import { Plus, Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import CiffTable from '@/components/CiffTable.vue'
 import CiffFormDialog from '@/components/CiffFormDialog.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -441,6 +454,7 @@ async function handleSubmitExecute() {
 
 function goToTaskDetail(task: WorkflowTask) {
   executeVisible.value = false
+  taskListWorkflowId.value = currentWorkflowId.value
   openTaskDetailDialog(task)
 }
 
@@ -659,8 +673,19 @@ function formatStepOutput(step: StepResult): string {
 }
 
 .task-item-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--ciff-text-tertiary);
   font-size: 12px;
+}
+
+.task-item-success {
+  color: #67c23a;
+}
+
+.task-item-fail {
+  color: #f56c6c;
 }
 
 .task-item-time {
@@ -682,13 +707,19 @@ function formatStepOutput(step: StepResult): string {
 }
 
 .task-detail-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--ciff-text-secondary);
   font-size: 14px;
 }
 
-.task-detail-step {
-  color: var(--ciff-text-tertiary);
-  font-size: 13px;
+.task-detail-success {
+  color: #67c23a;
+}
+
+.task-detail-fail {
+  color: #f56c6c;
 }
 
 .task-detail-refresh {

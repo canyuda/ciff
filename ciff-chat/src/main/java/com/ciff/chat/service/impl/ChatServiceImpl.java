@@ -18,6 +18,7 @@ import com.ciff.provider.llm.LlmChatClient;
 import com.ciff.provider.llm.LlmChatClientFactory;
 import com.ciff.provider.llm.LlmChatRequest;
 import com.ciff.provider.llm.LlmChatResponse;
+import com.ciff.provider.llm.StreamCallback;
 import com.ciff.knowledge.facade.KnowledgeFacade;
 import com.ciff.knowledge.service.DocumentService;
 import com.ciff.mcp.dto.ToolVO;
@@ -36,6 +37,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -73,6 +75,10 @@ public class ChatServiceImpl implements ChatService {
         var conversation = newConversation
                 ? conversationService.create(agent.getId(), truncateTitle(request.getMessage()), userId)
                 : conversationService.getById(request.getConversationId(), userId);
+
+        if (!newConversation && !conversation.getAgentId().equals(agent.getId())) {
+            throw new BizException(ErrorCode.FORBIDDEN, "会话与 Agent 不匹配");
+        }
 
         LlmCallConfig llmConfig = providerFacade.getLlmCallConfig(agent.getModelId());
         ChatMessagePO userMsg = messageService.saveUserMessage(conversation.getId(), request.getMessage());
@@ -130,6 +136,10 @@ public class ChatServiceImpl implements ChatService {
                         ? conversationService.create(agent.getId(), truncateTitle(request.getMessage()), userId)
                         : conversationService.getById(request.getConversationId(), userId);
 
+                if (!newConv && !conv.getAgentId().equals(agent.getId())) {
+                    throw new BizException(ErrorCode.FORBIDDEN, "会话与 Agent 不匹配");
+                }
+
                 emitter.send(SseEmitter.event().name("meta").data(toJson(
                         SseMetaEvent.builder()
                                 .conversationId(conv.getId())
@@ -146,21 +156,88 @@ public class ChatServiceImpl implements ChatService {
 
                 ProviderPO provider = providerFacade.getProviderById(llmConfig.getProviderId());
                 LlmChatClient client = llmChatClientFactory.create(provider);
-                LlmChatRequest llmRequest = buildLlmChatRequest(llmConfig, messages, List.of(), true);
+                List<Map<String, Object>> tools = buildToolsDefinition(agent);
 
                 long start = System.currentTimeMillis();
                 StringBuilder fullContent = new StringBuilder();
+                boolean[] hadToolCall = {false};
 
-                client.streamChat(llmRequest, token -> {
-                    try {
-                        if (token != null && !token.isEmpty()) {
-                            fullContent.append(token);
-                            emitter.send(SseEmitter.event().name("token").data(toJson(token)));
+                LlmChatRequest llmRequest = buildLlmChatRequest(llmConfig, messages, tools, true);
+                client.streamChat(llmRequest, new StreamCallback() {
+                    @Override
+                    public void onToken(String token) {
+                        try {
+                            if (token != null && !token.isEmpty()) {
+                                fullContent.append(token);
+                                emitter.send(SseEmitter.event().name("token").data(toJson(token)));
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
                         }
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
+                    }
+
+                    @Override
+                    public void onToolCall(String id, String name, String arguments) {
+                        hadToolCall[0] = true;
+                        try {
+                            // Notify frontend
+                            emitter.send(SseEmitter.event().name("tool_call").data(toJson(
+                                    Map.of("id", id, "name", name, "arguments", arguments))));
+
+                            // Execute tool
+                            List<Long> toolIds = agentToolService.listToolIds(agent.getId());
+                            List<ToolVO> agentTools = toolFacade.listByIds(toolIds);
+                            Map<String, ToolVO> toolMap = agentTools.stream()
+                                    .collect(Collectors.toMap(ToolVO::getName, t -> t, (a, b) -> a));
+                            ToolVO tool = toolMap.get(name);
+
+                            String toolResult;
+                            if (tool != null) {
+                                toolResult = executeToolApi(tool, arguments);
+                            } else {
+                                toolResult = "Tool not found: " + name;
+                            }
+
+                            emitter.send(SseEmitter.event().name("tool_result").data(toJson(
+                                    Map.of("id", id, "name", name, "result", toolResult))));
+
+                            // Append to messages for second LLM call
+                            messages.add(new LlmMessage.ToolCall("assistant", List.of(
+                                    ToolCallEntry.builder()
+                                            .id(id)
+                                            .type("function")
+                                            .function(ToolCallEntry.FunctionDef.builder()
+                                                    .name(name)
+                                                    .arguments(arguments)
+                                                    .build())
+                                            .build())));
+                            messages.add(new LlmMessage.ToolResult("tool", id, toolResult));
+                        } catch (Exception e) {
+                            log.warn("Stream tool execution failed: {}", e.getMessage());
+                            try {
+                                emitter.send(SseEmitter.event().name("tool_result").data(toJson(
+                                        Map.of("id", id, "name", name, "result", "Error: " + e.getMessage()))));
+                            } catch (Exception ignored) {
+                            }
+                        }
                     }
                 });
+
+                // If tool call happened, do a second streaming call without tools for final answer
+                if (hadToolCall[0]) {
+                    fullContent.setLength(0);
+                    LlmChatRequest followUp = buildLlmChatRequest(llmConfig, messages, List.of(), true);
+                    client.streamChat(followUp, (Consumer<String>) token -> {
+                        try {
+                            if (token != null && !token.isEmpty()) {
+                                fullContent.append(token);
+                                emitter.send(SseEmitter.event().name("token").data(toJson(token)));
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                }
 
                 String content = fullContent.toString();
                 int latencyMs = (int) (System.currentTimeMillis() - start);
@@ -185,7 +262,8 @@ public class ChatServiceImpl implements ChatService {
                 try {
                     emitter.send(SseEmitter.event().name("error")
                             .data(toJson(SseErrorEvent.builder().message(e.getMessage()).build())));
-                } catch (Exception ignored) {
+                } catch (Exception ex) {
+                    log.error("Failed to send SSE error event", ex);
                 }
                 emitter.completeWithError(e);
             }
@@ -217,7 +295,7 @@ public class ChatServiceImpl implements ChatService {
 
     private int getMaxContextTurns(AgentVO agent) {
         if (agent.getModelParams() != null && agent.getModelParams().getMaxContextTurns() != null) {
-            return agent.getModelParams().getMaxContextTurns();
+            return Math.max(1, agent.getModelParams().getMaxContextTurns());
         }
         return 5;
     }
@@ -372,10 +450,12 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private String executeToolApi(ToolVO tool, String arguments) {
-        log.debug("Tool API call - uri: {}, headers: {{}}, body: {}", tool.getEndpoint(), "Content-Type=application/json", arguments);
+        String endpoint = tool.getEndpoint();
+        validateToolEndpoint(endpoint);
+        log.debug("Tool API call - uri: {}, headers: {{}}, body: {}", endpoint, "Content-Type=application/json", arguments);
         try {
             return toolWebClient.post()
-                    .uri(tool.getEndpoint())
+                    .uri(endpoint)
                     .header("Content-Type", "application/json")
                     .bodyValue(arguments)
                     .retrieve()
@@ -384,6 +464,40 @@ public class ChatServiceImpl implements ChatService {
                     .block();
         } catch (Exception e) {
             throw new RuntimeException("Tool API call failed: " + e.getMessage(), e);
+        }
+    }
+
+    private void validateToolEndpoint(String url) {
+        if (url == null || url.isBlank()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "工具 endpoint 不能为空");
+        }
+        String lower = url.toLowerCase();
+        if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "工具 endpoint 仅支持 http/https 协议");
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            String host = uri.getHost();
+            if (host == null) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "工具 endpoint 无效: " + url);
+            }
+            if (host.equals("localhost") || host.equals("127.0.0.1") || host.equals("0.0.0.0")
+                    || host.startsWith("10.") || host.startsWith("192.168.")
+                    || host.startsWith("172.")) {
+                // 172.16-31.x.x
+                String[] parts = host.split("\\.");
+                if (parts.length == 4 && parts[0].equals("172")) {
+                    int second = Integer.parseInt(parts[1]);
+                    if (second >= 16 && second <= 31) {
+                        throw new BizException(ErrorCode.BAD_REQUEST, "禁止访问内网地址: " + host);
+                    }
+                }
+                if (!host.startsWith("172.")) {
+                    throw new BizException(ErrorCode.BAD_REQUEST, "禁止访问内网地址: " + host);
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "工具 endpoint URL 格式无效: " + url);
         }
     }
 

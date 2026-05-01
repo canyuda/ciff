@@ -20,6 +20,12 @@ public interface LlmChatClient {
     void streamChat(LlmChatRequest request, Consumer<String> callback);
 
     /**
+     * 流式聊天（支持工具调用）。
+     * 通过 StreamCallback 同时传递文本 token 和工具调用信息。
+     */
+    void streamChat(LlmChatRequest request, StreamCallback callback);
+
+    /**
      * 连通性探测，不消耗 token。
      * 优先使用各厂商的模型列表接口（如 GET /v1/models），
      * 确认 API Key 有效、网络可达、服务可用。

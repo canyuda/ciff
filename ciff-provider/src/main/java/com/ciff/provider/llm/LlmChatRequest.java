@@ -1,6 +1,8 @@
 package com.ciff.provider.llm;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Builder;
 import lombok.Data;
 
@@ -33,6 +35,7 @@ public class LlmChatRequest {
     @Data
     @Builder
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public static class Message {
         private String role;
         private String content;
@@ -49,6 +52,7 @@ public class LlmChatRequest {
      */
     @Data
     @Builder
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public static class ToolCall {
         private String id;
         private String type;
@@ -60,6 +64,7 @@ public class LlmChatRequest {
      */
     @Data
     @Builder
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public static class FunctionCall {
         private String name;
         private String arguments;

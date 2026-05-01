@@ -156,6 +156,10 @@ public class WorkflowServiceImpl implements WorkflowService {
     public void doExecuteAsync(WorkflowDefinition definition, Map<String, Object> inputs,
                                Long userId, Long workflowId, String taskId, Long executionId) {
         WorkflowExecutionPO execution = executionMapper.selectById(executionId);
+        if (execution == null) {
+            log.error("Workflow execution not found: {}", executionId);
+            return;
+        }
 
         try {
             execution.setStatus("RUNNING");
@@ -181,6 +185,7 @@ public class WorkflowServiceImpl implements WorkflowService {
             execution.setStatus(finalStatus);
             execution.setErrorMessage(error);
             execution.setFinalOutputs(result.getFinalOutputs());
+            execution.setTotalSteps(result.getStepResults().size());
             execution.setEndTime(LocalDateTime.now());
             executionMapper.updateById(execution);
 

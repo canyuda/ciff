@@ -21,4 +21,5 @@ public class OpenAiCompatibleRequest {
     private Double temperature;
     private Integer maxTokens;
     private List<LlmChatRequest.Message> messages;
+    private List<LlmChatRequest.ToolDefinition> tools;
 }

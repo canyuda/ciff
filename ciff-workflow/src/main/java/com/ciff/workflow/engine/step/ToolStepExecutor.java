@@ -1,5 +1,7 @@
 package com.ciff.workflow.engine.step;
 
+import com.ciff.common.constant.ErrorCode;
+import com.ciff.common.exception.BizException;
 import com.ciff.common.util.JsonUtil;
 import com.ciff.mcp.dto.ToolVO;
 import com.ciff.mcp.service.ToolService;
@@ -12,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.*;
 
@@ -28,7 +31,14 @@ public class ToolStepExecutor implements StepExecutor {
     @Override
     public StepResult execute(StepDefinition step, WorkflowContext context) {
         Map<String, Object> config = step.getConfig();
-        Long toolId = toLong(config.get("toolId"));
+        Object toolIdRaw = config.get("toolId");
+        if (toolIdRaw == null) {
+            return StepResult.builder()
+                    .stepId(step.getId()).stepName(step.getName()).type(step.getType())
+                    .success(false).error("Tool step missing required config: toolId")
+                    .build();
+        }
+        Long toolId = toLong(toolIdRaw);
         @SuppressWarnings("unchecked")
         Map<String, Object> params = config.get("params") instanceof Map
                 ? (Map<String, Object>) config.get("params")
@@ -59,6 +69,7 @@ public class ToolStepExecutor implements StepExecutor {
         Map<String, Object> filteredParams = filterParamsBySchema(resolvedParams, tool.getParamSchema());
 
         try {
+            validateToolEndpoint(tool.getEndpoint());
             String body = JsonUtil.toJson(filteredParams);
             String responseBody = webClient.post()
                     .uri(tool.getEndpoint())
@@ -108,6 +119,40 @@ public class ToolStepExecutor implements StepExecutor {
             mapped.put(entry.getValue(), value);
         }
         return mapped;
+    }
+
+    private void validateToolEndpoint(String url) {
+        if (url == null || url.isBlank()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "工具 endpoint 不能为空");
+        }
+        String lower = url.toLowerCase();
+        if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "工具 endpoint 仅支持 http/https 协议");
+        }
+        try {
+            URI uri = URI.create(url);
+            String host = uri.getHost();
+            if (host == null) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "工具 endpoint 无效: " + url);
+            }
+            if (host.equals("localhost") || host.equals("127.0.0.1") || host.equals("0.0.0.0")) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "禁止访问内网地址: " + host);
+            }
+            if (host.startsWith("10.") || host.startsWith("192.168.")) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "禁止访问内网地址: " + host);
+            }
+            if (host.startsWith("172.")) {
+                String[] parts = host.split("\\.");
+                if (parts.length >= 2) {
+                    int second = Integer.parseInt(parts[1]);
+                    if (second >= 16 && second <= 31) {
+                        throw new BizException(ErrorCode.BAD_REQUEST, "禁止访问内网地址: " + host);
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "工具 endpoint URL 格式无效: " + url);
+        }
     }
 
     private Long toLong(Object value) {

@@ -43,7 +43,9 @@ logging:
       ciff:
         common:
           http: debug
-
+        provider:
+          llm:
+            OpenAiCompatibleClient: debug
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

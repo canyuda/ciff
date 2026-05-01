@@ -51,7 +51,7 @@ if (!conversation.getAgentId().equals(agent.getId())) {
 **状态**：❌ 未修复  
 **问题**：`updateTitle()` 接口和 Service 都没有传入 `userId`，任何知道 `conversationId` 的人都能改标题。
 
-**修复建议**：接口增加 `userId` 参数，Service 内校验 `po.getUserId().equals(userId)`。
+**修复建议**：Controller 通过 `UserContext.getUserId()` 获取当前用户并传给 Service；Service 增加 `userId` 参数，校验 `po.getUserId().equals(userId)`。
 
 ---
 

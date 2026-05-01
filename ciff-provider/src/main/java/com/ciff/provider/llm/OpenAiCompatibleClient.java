@@ -8,10 +8,12 @@ import com.ciff.common.util.JsonUtil;
 import com.ciff.provider.dto.ProviderAuthConfig;
 import com.ciff.provider.entity.ProviderPO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 
 /**
@@ -19,6 +21,7 @@ import java.util.function.Consumer;
  * 覆盖 OpenAI、DeepSeek、Qwen、Ollama 等使用 /v1/chat/completions 接口的供应商。
  */
 @RequiredArgsConstructor
+@Slf4j
 public class OpenAiCompatibleClient implements LlmChatClient {
 
     private static final String DEFAULT_CHAT_PATH = "/v1/chat/completions";
@@ -39,23 +42,83 @@ public class OpenAiCompatibleClient implements LlmChatClient {
         String url = buildUrl();
         Map<String, String> headers = buildHeaders();
         String body = buildRequestBody(request, false);
-
+        log.debug("LLM request body: {}", body);
         String response = httpClient.post(provider.getName(), url, headers, body);
+        log.debug("LLM response body: {}", response);
         return parseResponse(response);
     }
 
     @Override
     public void streamChat(LlmChatRequest request, Consumer<String> callback) {
-        String url = buildUrl();
-        Map<String, String> headers = buildHeaders();
-        String body = buildRequestBody(request, true);
-
-        httpClient.stream(provider.getName(), url, headers, body, chunk -> {
-            String content = parseStreamChunk(chunk);
-            if (content != null) {
+        streamChat(request, new StreamCallback() {
+            @Override
+            public void onToken(String content) {
                 callback.accept(content);
             }
         });
+    }
+
+    @Override
+    public void streamChat(LlmChatRequest request, StreamCallback callback) {
+        String url = buildUrl();
+        Map<String, String> headers = buildHeaders();
+        String body = buildRequestBody(request, true);
+        log.debug("LLM request body: {}", body);
+
+        // Accumulate tool calls by index across streaming chunks
+        Map<Integer, ToolCallAccumulator> toolCallAccumulators = new TreeMap<>();
+
+        httpClient.stream(provider.getName(), url, headers, body, chunk -> {
+            OpenAiSseChunk sse = parseStreamChunkRaw(chunk);
+            if (sse == null || sse.getChoices() == null || sse.getChoices().isEmpty()) {
+                return;
+            }
+            OpenAiSseChunk.Choice choice = sse.getChoices().get(0);
+
+            // Text content
+            if (choice.getDelta() != null && choice.getDelta().getContent() != null) {
+                callback.onToken(choice.getDelta().getContent());
+            }
+
+            // Tool calls (incremental)
+            if (choice.getDelta() != null && choice.getDelta().getToolCalls() != null) {
+                for (OpenAiSseChunk.ToolCallDelta tc : choice.getDelta().getToolCalls()) {
+                    int index = tc.getIndex() != null ? tc.getIndex() : 0;
+                    ToolCallAccumulator acc = toolCallAccumulators.computeIfAbsent(index, k -> new ToolCallAccumulator());
+                    if (tc.getId() != null) acc.id = tc.getId();
+                    if (tc.getType() != null) acc.type = tc.getType();
+                    if (tc.getFunction() != null) {
+                        if (tc.getFunction().getName() != null) acc.name = tc.getFunction().getName();
+                        if (tc.getFunction().getArguments() != null) acc.arguments.append(tc.getFunction().getArguments());
+                    }
+                }
+            }
+
+            // Stream finished with tool calls
+            if ("tool_calls".equals(choice.getFinishReason())) {
+                for (ToolCallAccumulator acc : toolCallAccumulators.values()) {
+                    if (acc.id != null && acc.name != null) {
+                        callback.onToolCall(acc.id, acc.name, acc.arguments.toString());
+                    }
+                }
+            }
+        });
+    }
+
+    private static class ToolCallAccumulator {
+        String id;
+        String type;
+        String name;
+        final StringBuilder arguments = new StringBuilder();
+    }
+
+    private OpenAiSseChunk parseStreamChunkRaw(String chunk) {
+        try {
+            return JsonUtil.fromJson(chunk, OpenAiSseChunk.class);
+        } catch (Exception e) {
+            log.warn("Failed to parse SSE chunk: {}", chunk, e);
+            return null;
+        }
     }
 
     private Map<String, String> buildHeaders() {
@@ -116,6 +179,7 @@ public class OpenAiCompatibleClient implements LlmChatClient {
                 .temperature(request.getTemperature())
                 .maxTokens(request.getMaxTokens())
                 .messages(request.getMessages())
+                .tools(request.getTools())
                 .build();
         return JsonUtil.toJson(body);
     }
@@ -169,24 +233,6 @@ public class OpenAiCompatibleClient implements LlmChatClient {
         }
     }
 
-    /**
-     * 解析 SSE 流式 chunk，提取增量 content。
-     * OpenAI 格式: {"choices":[{"delta":{"content":"xxx"}}]}
-     */
-    private String parseStreamChunk(String chunk) {
-        try {
-            OpenAiSseChunk sse = JsonUtil.fromJson(chunk, OpenAiSseChunk.class);
-            if (sse.getChoices() != null && !sse.getChoices().isEmpty()) {
-                OpenAiSseChunk.Choice choice = sse.getChoices().get(0);
-                if (choice.getDelta() != null && choice.getDelta().getContent() != null) {
-                    return choice.getDelta().getContent();
-                }
-            }
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
 
     private static String normalizeBaseUrl(String baseUrl) {
         if (baseUrl.endsWith("/")) {
