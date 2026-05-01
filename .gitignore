@@ -27,3 +27,7 @@ dist/
 # Package
 ciff.tar.gz
 uploads/
+
+# Python
+__pycache__/
+*.pyc
