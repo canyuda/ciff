@@ -51,4 +51,13 @@ public class ProviderFacadeImpl implements ProviderFacade {
         config.setMaxTokens(model.getMaxTokens());
         return config;
     }
+
+    @Override
+    public ProviderPO getProviderById(Long providerId) {
+        ProviderPO provider = providerMapper.selectById(providerId);
+        if (provider == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "供应商不存在: " + providerId);
+        }
+        return provider;
+    }
 }

@@ -22,5 +22,5 @@ public interface WorkflowService {
     List<WorkflowTask> getTaskList(Long workflowId, Long userId);
     WorkflowTaskDetail getTaskDetail(Long workflowId, String taskId, Long userId);
     void doExecuteAsync(WorkflowDefinition definition, Map<String, Object> inputs,
-                        Long userId, Long workflowId, String taskId);
+                        Long userId, Long workflowId, String taskId, Long executionId);
 }

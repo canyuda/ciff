@@ -6,18 +6,20 @@ import com.ciff.common.constant.ErrorCode;
 import com.ciff.common.dto.PageResult;
 import com.ciff.common.exception.BizException;
 import com.ciff.common.util.PageHelper;
-import com.ciff.common.util.RedisUtil;
 import com.ciff.workflow.convertor.WorkflowConvertor;
 import com.ciff.workflow.dto.*;
 import com.ciff.workflow.engine.WorkflowEngine;
-import com.ciff.workflow.engine.WorkflowRedisKeys;
 import com.ciff.workflow.engine.dto.WorkflowExecutionResult;
+import com.ciff.workflow.engine.dto.WorkflowExecutionResult.StepResult;
 import com.ciff.workflow.engine.dto.WorkflowTask;
 import com.ciff.workflow.engine.dto.WorkflowTaskDetail;
-import com.ciff.workflow.engine.dto.WorkflowExecutionResult.StepResult;
+import com.ciff.workflow.entity.WorkflowExecutionPO;
+import com.ciff.workflow.entity.WorkflowNodeExecutionPO;
 import com.ciff.workflow.entity.WorkflowPO;
 import com.ciff.workflow.exception.InvalidWorkflowDefinitionException;
+import com.ciff.workflow.mapper.WorkflowExecutionMapper;
 import com.ciff.workflow.mapper.WorkflowMapper;
+import com.ciff.workflow.mapper.WorkflowNodeExecutionMapper;
 import com.ciff.workflow.service.WorkflowService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -26,7 +28,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,20 +35,22 @@ import java.util.stream.Collectors;
 public class WorkflowServiceImpl implements WorkflowService {
 
     private static final Set<String> VALID_STEP_TYPES = Set.of("llm", "tool", "condition", "knowledge_retrieval");
-    private static final long TASK_TTL_HOURS = 24;
 
     private final WorkflowMapper workflowMapper;
     private final WorkflowEngine workflowEngine;
-    private final RedisUtil redisUtil;
+    private final WorkflowExecutionMapper executionMapper;
+    private final WorkflowNodeExecutionMapper nodeExecutionMapper;
     private final WorkflowService self;
 
     public WorkflowServiceImpl(WorkflowMapper workflowMapper,
                                WorkflowEngine workflowEngine,
-                               RedisUtil redisUtil,
+                               WorkflowExecutionMapper executionMapper,
+                               WorkflowNodeExecutionMapper nodeExecutionMapper,
                                @Lazy WorkflowService self) {
         this.workflowMapper = workflowMapper;
         this.workflowEngine = workflowEngine;
-        this.redisUtil = redisUtil;
+        this.executionMapper = executionMapper;
+        this.nodeExecutionMapper = nodeExecutionMapper;
         this.self = self;
     }
 
@@ -111,165 +114,82 @@ public class WorkflowServiceImpl implements WorkflowService {
         String taskId = UUID.randomUUID().toString().replace("-", "");
         int totalSteps = po.getDefinition().getSteps().size();
 
-        WorkflowTask task = WorkflowTask.builder()
-                .taskId(taskId)
-                .workflowId(id)
-                .userId(userId)
-                .status(WorkflowTask.TaskStatus.STARTED)
-                .totalSteps(totalSteps)
-                .completedSteps(0)
-                .inputs(inputs != null ? inputs : Map.of())
-                .startTime(LocalDateTime.now())
-                .build();
+        WorkflowExecutionPO execution = WorkflowConvertor.toExecutionPO(id, userId, taskId, inputs, totalSteps);
+        executionMapper.insert(execution);
 
-        // push task summary to Redis List
-        String listKey = WorkflowRedisKeys.taskListKey(userId, id);
-        redisUtil.listPushWithTtl(listKey, task, TASK_TTL_HOURS, TimeUnit.HOURS);
+        self.doExecuteAsync(po.getDefinition(), inputs, userId, id, taskId, execution.getId());
 
-        // create task detail as Redis String
-        WorkflowTaskDetail detail = WorkflowTaskDetail.builder()
-                .taskId(taskId)
-                .workflowId(id)
-                .status(WorkflowTask.TaskStatus.STARTED)
-                .totalSteps(totalSteps)
-                .completedSteps(0)
-                .inputs(inputs != null ? inputs : Map.of())
-                .stepResults(new ArrayList<>())
-                .startTime(LocalDateTime.now().toString())
-                .build();
-        String detailKey = WorkflowRedisKeys.taskDetailKey(userId, id, taskId);
-        redisUtil.set(detailKey, detail, TASK_TTL_HOURS, TimeUnit.HOURS);
-
-        // async execution via proxy to ensure @Async works
-        self.doExecuteAsync(po.getDefinition(), inputs, userId, id, taskId);
-
-        return task;
+        return WorkflowConvertor.toTask(execution);
     }
 
     @Override
     public List<WorkflowTask> getTaskList(Long workflowId, Long userId) {
-        String listKey = WorkflowRedisKeys.taskListKey(userId, workflowId);
-        List<WorkflowTask> tasks = redisUtil.listRange(listKey);
-        if (tasks == null) return List.of();
-        // newest first
-        List<WorkflowTask> result = new ArrayList<>(tasks);
-        Collections.reverse(result);
-        return result;
+        LambdaQueryWrapper<WorkflowExecutionPO> wrapper = new LambdaQueryWrapper<WorkflowExecutionPO>()
+                .eq(WorkflowExecutionPO::getWorkflowId, workflowId)
+                .eq(WorkflowExecutionPO::getUserId, userId)
+                .orderByDesc(WorkflowExecutionPO::getStartTime);
+        return executionMapper.selectList(wrapper).stream()
+                .map(WorkflowConvertor::toTask)
+                .collect(Collectors.toList());
     }
 
     @Override
     public WorkflowTaskDetail getTaskDetail(Long workflowId, String taskId, Long userId) {
-        String detailKey = WorkflowRedisKeys.taskDetailKey(userId, workflowId, taskId);
-        WorkflowTaskDetail detail = redisUtil.get(detailKey);
-        if (detail == null) {
+        LambdaQueryWrapper<WorkflowExecutionPO> wrapper = new LambdaQueryWrapper<WorkflowExecutionPO>()
+                .eq(WorkflowExecutionPO::getWorkflowId, workflowId)
+                .eq(WorkflowExecutionPO::getTaskId, taskId)
+                .eq(WorkflowExecutionPO::getUserId, userId);
+        WorkflowExecutionPO execution = executionMapper.selectOne(wrapper);
+        if (execution == null) {
             throw new BizException(ErrorCode.BAD_REQUEST, "Task not found: " + taskId);
         }
-        return detail;
+
+        LambdaQueryWrapper<WorkflowNodeExecutionPO> nodeWrapper = new LambdaQueryWrapper<WorkflowNodeExecutionPO>()
+                .eq(WorkflowNodeExecutionPO::getExecutionId, execution.getId())
+                .orderByAsc(WorkflowNodeExecutionPO::getId);
+        List<WorkflowNodeExecutionPO> nodeExecutions = nodeExecutionMapper.selectList(nodeWrapper);
+
+        return WorkflowConvertor.toTaskDetail(execution, nodeExecutions);
     }
 
     @Async
     public void doExecuteAsync(WorkflowDefinition definition, Map<String, Object> inputs,
-                               Long userId, Long workflowId, String taskId) {
-        String listKey = WorkflowRedisKeys.taskListKey(userId, workflowId);
-        String detailKey = WorkflowRedisKeys.taskDetailKey(userId, workflowId, taskId);
+                               Long userId, Long workflowId, String taskId, Long executionId) {
+        WorkflowExecutionPO execution = executionMapper.selectById(executionId);
 
         try {
-            updateStatus(listKey, detailKey, taskId, WorkflowTask.TaskStatus.RUNNING, null);
+            execution.setStatus("RUNNING");
+            executionMapper.updateById(execution);
 
-            WorkflowExecutionResult result = workflowEngine.execute(definition, inputs, (step, stepResult, allResults, totalSteps) -> {
-                int completed = allResults.size();
+            WorkflowExecutionResult result = workflowEngine.execute(definition, inputs,
+                    (step, stepResult, allResults, totalSteps) -> {
+                execution.setCurrentStepId(step.getId());
+                execution.setCurrentStepName(step.getName());
+                execution.setCompletedSteps(allResults.size());
+                executionMapper.updateById(execution);
 
-                // update task in list
-                WorkflowTask task = findTaskInList(listKey, taskId);
-                if (task != null) {
-                    task.setStatus(WorkflowTask.TaskStatus.RUNNING);
-                    task.setCurrentStepId(step.getId());
-                    task.setCurrentStepName(step.getName());
-                    task.setCompletedSteps(completed);
-                    updateTaskInList(listKey, taskId, task);
-                }
-
-                // update task detail
-                WorkflowTaskDetail detail = redisUtil.get(detailKey);
-                if (detail != null) {
-                    detail.setStatus(WorkflowTask.TaskStatus.RUNNING);
-                    detail.setCurrentStepId(step.getId());
-                    detail.setCurrentStepName(step.getName());
-                    detail.setCompletedSteps(completed);
-                    detail.setStepResults(new ArrayList<>(allResults));
-                    redisUtil.set(detailKey, detail, TASK_TTL_HOURS, TimeUnit.HOURS);
-                }
+                WorkflowNodeExecutionPO nodePO = WorkflowConvertor.toNodeExecutionPO(executionId, stepResult);
+                nodeExecutionMapper.insert(nodePO);
             });
 
-            WorkflowTask.TaskStatus finalStatus = result.isSuccess()
-                    ? WorkflowTask.TaskStatus.SUCCESS : WorkflowTask.TaskStatus.FAILED;
+            String finalStatus = result.isSuccess() ? "SUCCESS" : "FAILED";
             String error = result.isSuccess() ? null : result.getStepResults().stream()
                     .filter(r -> !r.isSuccess())
                     .map(StepResult::getError)
                     .findFirst().orElse(null);
 
-            updateStatus(listKey, detailKey, taskId, finalStatus, error);
-
-            // update detail with final outputs
-            WorkflowTaskDetail detail = redisUtil.get(detailKey);
-            if (detail != null) {
-                detail.setFinalOutputs(result.getFinalOutputs());
-                detail.setStepResults(result.getStepResults());
-                detail.setEndTime(LocalDateTime.now().toString());
-                redisUtil.set(detailKey, detail, TASK_TTL_HOURS, TimeUnit.HOURS);
-            }
+            execution.setStatus(finalStatus);
+            execution.setErrorMessage(error);
+            execution.setFinalOutputs(result.getFinalOutputs());
+            execution.setEndTime(LocalDateTime.now());
+            executionMapper.updateById(execution);
 
         } catch (Exception e) {
             log.error("Workflow async execution failed, taskId={}", taskId, e);
-            updateStatus(listKey, detailKey, taskId, WorkflowTask.TaskStatus.FAILED, e.getMessage());
-        }
-    }
-
-    private void updateStatus(String listKey, String detailKey, String taskId,
-                              WorkflowTask.TaskStatus status, String error) {
-        // update task in list
-        WorkflowTask task = findTaskInList(listKey, taskId);
-        if (task != null) {
-            task.setStatus(status);
-            task.setEndTime(isTerminalStatus(status) ? LocalDateTime.now() : null);
-            updateTaskInList(listKey, taskId, task);
-        }
-
-        // update detail
-        WorkflowTaskDetail detail = redisUtil.get(detailKey);
-        if (detail != null) {
-            detail.setStatus(status);
-            if (error != null) detail.setError(error);
-            if (isTerminalStatus(status)) detail.setEndTime(LocalDateTime.now().toString());
-            redisUtil.set(detailKey, detail, TASK_TTL_HOURS, TimeUnit.HOURS);
-        }
-    }
-
-    private boolean isTerminalStatus(WorkflowTask.TaskStatus status) {
-        return status == WorkflowTask.TaskStatus.SUCCESS
-                || status == WorkflowTask.TaskStatus.FAILED
-                || status == WorkflowTask.TaskStatus.TIMEOUT;
-    }
-
-    private WorkflowTask findTaskInList(String listKey, String taskId) {
-        List<WorkflowTask> tasks = redisUtil.listRange(listKey);
-        if (tasks == null) return null;
-        for (int i = 0; i < tasks.size(); i++) {
-            if (taskId.equals(tasks.get(i).getTaskId())) {
-                return tasks.get(i);
-            }
-        }
-        return null;
-    }
-
-    private void updateTaskInList(String listKey, String taskId, WorkflowTask updated) {
-        List<WorkflowTask> tasks = redisUtil.listRange(listKey);
-        if (tasks == null) return;
-        for (int i = 0; i < tasks.size(); i++) {
-            if (taskId.equals(tasks.get(i).getTaskId())) {
-                redisUtil.listUpdateEntry(listKey, i, updated);
-                return;
-            }
+            execution.setStatus("FAILED");
+            execution.setErrorMessage(e.getMessage());
+            execution.setEndTime(LocalDateTime.now());
+            executionMapper.updateById(execution);
         }
     }
 

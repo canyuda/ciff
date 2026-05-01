@@ -1,12 +1,12 @@
 package com.ciff.provider.llm;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Claude Messages API response.
@@ -27,7 +27,7 @@ public class ClaudeMessagesResponse {
         private String text;
         private String id;
         private String name;
-        private JsonNode input;
+        private Map<String, Object> input;
     }
 
     @Data

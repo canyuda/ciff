@@ -25,9 +25,6 @@ class GitHubOAuthServiceTest {
     @Mock
     private UserService userService;
 
-    @Mock
-    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
-
     @InjectMocks
     private GitHubOAuthService gitHubOAuthService;
 

@@ -1,7 +1,7 @@
 package com.ciff.common.aspect;
 
 import com.ciff.common.annotation.IgnoreLogRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ciff.common.util.JsonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -32,14 +32,8 @@ public class RequestLoggingAspect {
 
     private static final Set<String> SENSITIVE_HEADERS = Set.of("authorization", "cookie");
 
-    private final ObjectMapper objectMapper;
-
     @Value("${ciff.logging.max-payload-length:2000}")
     private int maxPayloadLength;
-
-    public RequestLoggingAspect(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
 
     @Around("@annotation(org.springframework.web.bind.annotation.RequestMapping)" +
             " || @annotation(org.springframework.web.bind.annotation.GetMapping)" +
@@ -128,7 +122,7 @@ public class RequestLoggingAspect {
 
     private String toJson(Object obj) {
         try {
-            String json = objectMapper.writeValueAsString(obj);
+            String json = JsonUtil.toJson(obj);
             if (json.length() <= maxPayloadLength) {
                 return json;
             }

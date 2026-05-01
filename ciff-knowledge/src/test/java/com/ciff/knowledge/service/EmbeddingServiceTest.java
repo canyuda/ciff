@@ -3,7 +3,6 @@ package com.ciff.knowledge.service;
 import com.ciff.common.http.LlmHttpClient;
 import com.ciff.knowledge.config.EmbeddingProperties;
 import com.ciff.knowledge.service.impl.EmbeddingServiceImpl;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,13 +28,11 @@ class EmbeddingServiceTest {
     @Mock
     private EmbeddingProperties properties;
 
-    private ObjectMapper objectMapper;
     private EmbeddingServiceImpl embeddingService;
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper();
-        embeddingService = new EmbeddingServiceImpl(llmHttpClient, properties, objectMapper);
+        embeddingService = new EmbeddingServiceImpl(llmHttpClient, properties);
     }
 
     @Test

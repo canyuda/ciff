@@ -1,12 +1,12 @@
 package com.ciff.workflow.engine.step;
 
+import com.ciff.common.util.JsonUtil;
 import com.ciff.mcp.dto.ToolVO;
 import com.ciff.mcp.service.ToolService;
 import com.ciff.workflow.dto.StepDefinition;
 import com.ciff.workflow.engine.WorkflowContext;
 import com.ciff.workflow.engine.dto.WorkflowExecutionResult.StepResult;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -23,7 +23,6 @@ public class ToolStepExecutor implements StepExecutor {
     private static final int TOOL_TIMEOUT_SECONDS = 30;
 
     private final ToolService toolService;
-    private final ObjectMapper objectMapper;
     private final WebClient webClient = WebClient.builder().build();
 
     @Override
@@ -60,7 +59,7 @@ public class ToolStepExecutor implements StepExecutor {
         Map<String, Object> filteredParams = filterParamsBySchema(resolvedParams, tool.getParamSchema());
 
         try {
-            String body = objectMapper.writeValueAsString(filteredParams);
+            String body = JsonUtil.toJson(filteredParams);
             String responseBody = webClient.post()
                     .uri(tool.getEndpoint())
                     .header("Content-Type", "application/json")
@@ -70,8 +69,7 @@ public class ToolStepExecutor implements StepExecutor {
                     .timeout(Duration.ofSeconds(TOOL_TIMEOUT_SECONDS))
                     .block();
 
-            Map<String, Object> resultData = objectMapper.readValue(
-                    responseBody, new TypeReference<HashMap<String, Object>>() {});
+            Map<String, Object> resultData = JsonUtil.fromJson(responseBody, new TypeReference<>() {});
 
             // expose "result" pointing to full response (for output mapping like {"result": "weatherData"})
             Map<String, Object> sourceOutputs = new HashMap<>(resultData);

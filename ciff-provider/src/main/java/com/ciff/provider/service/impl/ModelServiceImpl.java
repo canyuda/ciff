@@ -15,8 +15,7 @@ import com.ciff.provider.entity.ProviderPO;
 import com.ciff.provider.mapper.ModelMapper;
 import com.ciff.provider.mapper.ProviderMapper;
 import com.ciff.provider.service.ModelService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ciff.common.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
@@ -30,7 +29,6 @@ public class ModelServiceImpl implements ModelService {
     private final ModelMapper modelMapper;
     private final ProviderMapper providerMapper;
     private final CacheManager cacheManager;
-    private final ObjectMapper objectMapper;
 
     @Override
     public ModelVO create(ModelCreateRequest request) {
@@ -138,10 +136,8 @@ public class ModelServiceImpl implements ModelService {
         if (defaultParams == null || defaultParams.isBlank()) {
             return;
         }
-        try {
-            objectMapper.readTree(defaultParams);
-        } catch (JsonProcessingException e) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "defaultParams 不是有效的 JSON: " + e.getMessage());
+        if (!JsonUtil.isValidJson(defaultParams)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "defaultParams 不是有效的 JSON");
         }
     }
 

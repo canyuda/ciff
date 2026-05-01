@@ -10,7 +10,6 @@ import com.ciff.provider.entity.ProviderPO;
 import com.ciff.provider.mapper.ModelMapper;
 import com.ciff.provider.mapper.ProviderMapper;
 import com.ciff.provider.service.impl.ModelServiceImpl;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,9 +35,6 @@ class ModelServiceTest {
 
     @Mock
     private CacheManager cacheManager;
-
-    @Mock
-    private ObjectMapper objectMapper;
 
     @InjectMocks
     private ModelServiceImpl modelService;
@@ -102,12 +98,10 @@ class ModelServiceTest {
     }
 
     @Test
-    void create_withInvalidDefaultParams_shouldThrow() throws Exception {
+    void create_withInvalidDefaultParams_shouldThrow() {
         ProviderPO provider = new ProviderPO();
         provider.setId(1L);
         when(providerMapper.selectById(1L)).thenReturn(provider);
-        when(objectMapper.readTree(any(String.class))).thenThrow(
-                new com.fasterxml.jackson.core.JsonParseException("Invalid JSON"));
 
         ModelCreateRequest request = new ModelCreateRequest();
         request.setProviderId(1L);
@@ -152,13 +146,11 @@ class ModelServiceTest {
     }
 
     @Test
-    void update_withInvalidDefaultParams_shouldThrow() throws Exception {
+    void update_withInvalidDefaultParams_shouldThrow() {
         ModelPO existing = new ModelPO();
         existing.setId(1L);
         existing.setProviderId(1L);
         when(modelMapper.selectById(1L)).thenReturn(existing);
-        when(objectMapper.readTree(any(String.class))).thenThrow(
-                new com.fasterxml.jackson.core.JsonParseException("Invalid JSON"));
 
         ModelUpdateRequest request = new ModelUpdateRequest();
         request.setDefaultParams("bad-json");

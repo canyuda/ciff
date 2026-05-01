@@ -10,19 +10,21 @@ import com.ciff.chat.service.ChatMessageService;
 import com.ciff.chat.service.ChatService;
 import com.ciff.chat.service.ConversationService;
 import com.ciff.common.constant.ErrorCode;
-import com.ciff.common.enums.ProviderType;
 import com.ciff.common.exception.BizException;
-import com.ciff.common.http.LlmHttpClient;
+import com.ciff.common.util.JsonUtil;
 import com.ciff.knowledge.entity.KnowledgeChunkPO;
+import com.ciff.provider.entity.ProviderPO;
+import com.ciff.provider.llm.LlmChatClient;
+import com.ciff.provider.llm.LlmChatClientFactory;
+import com.ciff.provider.llm.LlmChatRequest;
+import com.ciff.provider.llm.LlmChatResponse;
 import com.ciff.knowledge.facade.KnowledgeFacade;
 import com.ciff.knowledge.service.DocumentService;
 import com.ciff.mcp.dto.ToolVO;
 import com.ciff.mcp.facade.ToolFacade;
 import com.ciff.provider.dto.LlmCallConfig;
 import com.ciff.provider.dto.ModelDefaultParam;
-import com.ciff.provider.llm.OpenAiSseChunk;
 import com.ciff.provider.facade.ProviderFacade;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -55,8 +56,7 @@ public class ChatServiceImpl implements ChatService {
     private final KnowledgeFacade knowledgeFacade;
     private final DocumentService documentService;
     private final ToolFacade toolFacade;
-    private final LlmHttpClient llmHttpClient;
-    private final ObjectMapper objectMapper;
+    private final LlmChatClientFactory llmChatClientFactory;
 
     @Autowired
     @Qualifier("llmExecutor")
@@ -85,8 +85,8 @@ public class ChatServiceImpl implements ChatService {
         List<Map<String, Object>> tools = buildToolsDefinition(agent);
 
         long start = System.currentTimeMillis();
-        String responseBody = callLlm(llmConfig, messages, tools);
-        ParsedResponse parsed = parseResponse(llmConfig, responseBody);
+        LlmChatResponse llmResponse = callLlm(llmConfig, messages, tools);
+        ParsedResponse parsed = parseLlmChatResponse(llmResponse);
 
         String finalContent = parsed.content;
         TokenUsage finalTokenUsage = parsed.tokenUsage;
@@ -144,16 +144,15 @@ public class ChatServiceImpl implements ChatService {
                 List<KnowledgeChunkPO> ragChunks = enhanceWithRag(agent, request.getMessage(), messages, request.getRagMode());
                 List<String> referenceDocs = extractReferenceDocuments(ragChunks);
 
-                String url = getChatEndpoint(llmConfig);
-                Map<String, String> headers = buildHeaders(llmConfig);
-                String body = buildOpenAiRequestBody(llmConfig, messages, List.of(), true);
+                ProviderPO provider = providerFacade.getProviderById(llmConfig.getProviderId());
+                LlmChatClient client = llmChatClientFactory.create(provider);
+                LlmChatRequest llmRequest = buildLlmChatRequest(llmConfig, messages, List.of(), true);
 
                 long start = System.currentTimeMillis();
                 StringBuilder fullContent = new StringBuilder();
 
-                llmHttpClient.stream(llmConfig.getProviderName(), url, headers, body, data -> {
+                client.streamChat(llmRequest, token -> {
                     try {
-                        String token = extractOpenAiToken(data);
                         if (token != null && !token.isEmpty()) {
                             fullContent.append(token);
                             emitter.send(SseEmitter.event().name("token").data(toJson(token)));
@@ -360,8 +359,8 @@ public class ChatServiceImpl implements ChatService {
                             .build())));
             messages.add(new LlmMessage.ToolResult("tool", parsed.toolCallId, toolResult));
 
-            String responseBody = callLlm(llmConfig, messages, tools);
-            ParsedResponse finalParsed = parseResponse(llmConfig, responseBody);
+            LlmChatResponse llmResponse = callLlm(llmConfig, messages, tools);
+            ParsedResponse finalParsed = parseLlmChatResponse(llmResponse);
 
             return new ToolCallResult(finalParsed.content, finalParsed.tokenUsage);
 
@@ -390,177 +389,123 @@ public class ChatServiceImpl implements ChatService {
 
     // ==================== LLM calling ====================
 
-    private String callLlm(LlmCallConfig config, List<LlmMessage> messages,
-                            List<Map<String, Object>> tools) {
-        String url = getChatEndpoint(config);
-        Map<String, String> headers = buildHeaders(config);
-        String body = buildOpenAiRequestBody(config, messages, tools, false);
-        return llmHttpClient.post(config.getProviderName(), url, headers, body);
+    private LlmChatResponse callLlm(LlmCallConfig config, List<LlmMessage> messages,
+                                     List<Map<String, Object>> tools) {
+        ProviderPO provider = providerFacade.getProviderById(config.getProviderId());
+        LlmChatClient client = llmChatClientFactory.create(provider);
+        LlmChatRequest request = buildLlmChatRequest(config, messages, tools, false);
+        return client.chat(request);
     }
 
-    private String getChatEndpoint(LlmCallConfig config) {
-        String baseUrl = config.getApiBaseUrl().replaceAll("/+$", "");
-        if (config.getProviderType() == ProviderType.CLAUDE) {
-            return baseUrl + "/v1/messages";
-        }
-        return baseUrl + "/v1/chat/completions";
-    }
-
-    private Map<String, String> buildHeaders(LlmCallConfig config) {
-        Map<String, String> headers = new LinkedHashMap<>();
-        headers.put("Content-Type", "application/json");
-
-        if (config.getProviderType() == ProviderType.CLAUDE) {
-            headers.put("x-api-key", config.getApiKey());
-            headers.put("anthropic-version", "2023-06-01");
-        } else {
-            headers.put("Authorization", "Bearer " + config.getApiKey());
-        }
-        return headers;
-    }
-
-    private String buildOpenAiRequestBody(LlmCallConfig config,
-                                           List<LlmMessage> messages,
-                                           List<Map<String, Object>> tools,
-                                           boolean stream) {
-        BigDecimal temperature = null;
+    private LlmChatRequest buildLlmChatRequest(LlmCallConfig config,
+                                                 List<LlmMessage> messages,
+                                                 List<Map<String, Object>> tools,
+                                                 boolean stream) {
+        Double temperature = null;
         Integer maxTokens = config.getMaxTokens();
         if (config.getDefaultParams() != null) {
             ModelDefaultParam dp = config.getDefaultParams();
-            if (dp.getTemperature() != null) temperature = dp.getTemperature();
+            if (dp.getTemperature() != null) temperature = dp.getTemperature().doubleValue();
             if (dp.getMaxTokens() != null) maxTokens = dp.getMaxTokens();
         }
 
-        OpenAiChatRequest request = OpenAiChatRequest.builder()
-                .model(config.getModelName())
+        // Convert LlmMessage to LlmChatRequest.Message
+        List<LlmChatRequest.Message> requestMessages = messages.stream()
+                .map(this::convertMessage)
+                .toList();
+
+        // Convert tools definition
+        List<LlmChatRequest.ToolDefinition> toolDefinitions = null;
+        if (tools != null && !tools.isEmpty()) {
+            toolDefinitions = tools.stream()
+                    .map(this::convertToolDefinition)
+                    .toList();
+        }
+
+        return LlmChatRequest.builder()
+                .modelName(config.getModelName())
+                .messages(requestMessages)
                 .temperature(temperature)
                 .maxTokens(maxTokens)
                 .stream(stream)
-                .messages(messages)
-                .tools(tools != null && !tools.isEmpty() ? tools : null)
+                .tools(toolDefinitions)
                 .build();
+    }
 
-        return toJson(request);
+    private LlmChatRequest.Message convertMessage(LlmMessage msg) {
+        if (msg instanceof LlmMessage.Text text) {
+            return LlmChatRequest.Message.builder()
+                    .role(text.role())
+                    .content(text.content())
+                    .build();
+        } else if (msg instanceof LlmMessage.ToolCall toolCall) {
+            List<LlmChatRequest.ToolCall> toolCalls = toolCall.toolCalls().stream()
+                    .map(tc -> LlmChatRequest.ToolCall.builder()
+                            .id(tc.getId())
+                            .type(tc.getType())
+                            .function(LlmChatRequest.FunctionCall.builder()
+                                    .name(tc.getFunction().getName())
+                                    .arguments(tc.getFunction().getArguments())
+                                    .build())
+                            .build())
+                    .toList();
+            return LlmChatRequest.Message.builder()
+                    .role(toolCall.role())
+                    .toolCalls(toolCalls)
+                    .build();
+        } else if (msg instanceof LlmMessage.ToolResult toolResult) {
+            return LlmChatRequest.Message.builder()
+                    .role(toolResult.role())
+                    .toolCallId(toolResult.toolCallId())
+                    .content(toolResult.content())
+                    .build();
+        }
+        throw new IllegalArgumentException("Unknown message type: " + msg.getClass());
+    }
+
+    private LlmChatRequest.ToolDefinition convertToolDefinition(Map<String, Object> tool) {
+        Map<String, Object> function = (Map<String, Object>) tool.get("function");
+        return LlmChatRequest.ToolDefinition.builder()
+                .type((String) tool.get("type"))
+                .function(LlmChatRequest.FunctionDefinition.builder()
+                        .name((String) function.get("name"))
+                        .description((String) function.get("description"))
+                        .parameters((Map<String, Object>) function.get("parameters"))
+                        .build())
+                .build();
     }
 
     // ==================== Response parsing ====================
 
-    private ParsedResponse parseResponse(LlmCallConfig config, String responseBody) {
+    private ParsedResponse parseLlmChatResponse(LlmChatResponse llmResponse) {
         try {
-            if (config.getProviderType() == ProviderType.CLAUDE) {
-                return parseClaudeResponse(responseBody);
+            String content = llmResponse.getContent() != null ? llmResponse.getContent() : "";
+            TokenUsage tokenUsage = new TokenUsage(0, 0);
+            if (llmResponse.getUsage() != null) {
+                tokenUsage = new TokenUsage(
+                        llmResponse.getUsage().getPromptTokens() != null ? llmResponse.getUsage().getPromptTokens() : 0,
+                        llmResponse.getUsage().getCompletionTokens() != null ? llmResponse.getUsage().getCompletionTokens() : 0);
             }
-            return parseOpenAiResponse(responseBody);
+
+            // Parse tool calls
+            boolean hasToolCall = false;
+            String toolCallId = null;
+            String toolCallName = null;
+            String toolCallArguments = null;
+            if (llmResponse.getToolCalls() != null && !llmResponse.getToolCalls().isEmpty()) {
+                hasToolCall = true;
+                LlmChatResponse.ToolCall tc = llmResponse.getToolCalls().get(0);
+                toolCallId = tc.getId();
+                toolCallName = tc.getFunction().getName();
+                toolCallArguments = tc.getFunction().getArguments();
+            }
+
+            return new ParsedResponse(content, tokenUsage, hasToolCall, toolCallId, toolCallName, toolCallArguments);
         } catch (Exception e) {
             log.warn("Failed to parse LLM response: {}", e.getMessage());
-            return new ParsedResponse(responseBody, new TokenUsage(0, 0),
+            return new ParsedResponse("", new TokenUsage(0, 0),
                     false, null, null, null);
         }
-    }
-
-    private ParsedResponse parseOpenAiResponse(String responseBody) {
-        try {
-            OpenAiChatResponse resp = objectMapper.readValue(responseBody, OpenAiChatResponse.class);
-
-            String content = "";
-            TokenUsage tokenUsage = new TokenUsage(0, 0);
-            boolean hasToolCall = false;
-            String toolCallId = null;
-            String toolCallName = null;
-            String toolCallArguments = null;
-
-            if (resp.getChoices() != null && !resp.getChoices().isEmpty()) {
-                OpenAiChatResponse.Message message = resp.getChoices().get(0).getMessage();
-                if (message != null) {
-                    content = message.getContent() != null ? message.getContent() : "";
-
-                    List<OpenAiChatResponse.ToolCall> toolCalls = message.getToolCalls();
-                    if (toolCalls != null && !toolCalls.isEmpty()) {
-                        hasToolCall = true;
-                        OpenAiChatResponse.ToolCall tc = toolCalls.get(0);
-                        toolCallId = tc.getId();
-                        toolCallName = tc.getFunction().getName();
-                        toolCallArguments = tc.getFunction().getArguments();
-                    }
-                }
-            }
-
-            if (resp.getUsage() != null) {
-                tokenUsage = new TokenUsage(
-                        resp.getUsage().getPromptTokens(),
-                        resp.getUsage().getCompletionTokens());
-            }
-
-            return new ParsedResponse(content, tokenUsage, hasToolCall,
-                    toolCallId, toolCallName, toolCallArguments);
-        } catch (Exception e) {
-            log.warn("Failed to parse OpenAI response: {}", e.getMessage());
-            return new ParsedResponse(responseBody, new TokenUsage(0, 0),
-                    false, null, null, null);
-        }
-    }
-
-    private ParsedResponse parseClaudeResponse(String responseBody) {
-        try {
-            ClaudeChatResponse resp = objectMapper.readValue(responseBody, ClaudeChatResponse.class);
-
-            String content = "";
-            TokenUsage tokenUsage = new TokenUsage(0, 0);
-            boolean hasToolCall = false;
-            String toolCallId = null;
-            String toolCallName = null;
-            String toolCallArguments = null;
-
-            if (resp.getContent() != null && !resp.getContent().isEmpty()) {
-                StringBuilder sb = new StringBuilder();
-                for (ClaudeChatResponse.ContentBlock block : resp.getContent()) {
-                    String type = block.getType();
-                    if ("text".equals(type)) {
-                        sb.append(block.getText());
-                    } else if ("tool_use".equals(type)) {
-                        hasToolCall = true;
-                        toolCallId = block.getId();
-                        toolCallName = block.getName();
-                        try {
-                            toolCallArguments = objectMapper.writeValueAsString(block.getInput());
-                        } catch (Exception e) {
-                            toolCallArguments = "{}";
-                        }
-                    }
-                }
-                content = sb.toString();
-            }
-
-            if (resp.getUsage() != null) {
-                tokenUsage = new TokenUsage(
-                        resp.getUsage().getInputTokens(),
-                        resp.getUsage().getOutputTokens());
-            }
-
-            return new ParsedResponse(content, tokenUsage, hasToolCall,
-                    toolCallId, toolCallName, toolCallArguments);
-        } catch (Exception e) {
-            log.warn("Failed to parse Claude response: {}", e.getMessage());
-            return new ParsedResponse(responseBody, new TokenUsage(0, 0),
-                    false, null, null, null);
-        }
-    }
-
-    // ==================== SSE helpers ====================
-
-    private String extractOpenAiToken(String data) {
-        try {
-            OpenAiSseChunk chunk = objectMapper.readValue(data, OpenAiSseChunk.class);
-            if (chunk.getChoices() != null && !chunk.getChoices().isEmpty()) {
-                OpenAiSseChunk.Choice choice = chunk.getChoices().get(0);
-                if (choice.getDelta() != null && choice.getDelta().getContent() != null) {
-                    return choice.getDelta().getContent();
-                }
-            }
-        } catch (Exception e) {
-            log.debug("Failed to parse SSE token: {}", data);
-        }
-        return null;
     }
 
     private TokenUsage estimateTokenUsage(String content) {
@@ -589,11 +534,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private String toJson(Object obj) {
-        try {
-            return objectMapper.writeValueAsString(obj);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to serialize object", e);
-        }
+        return JsonUtil.toJson(obj);
     }
 
     // ==================== Inner records ====================

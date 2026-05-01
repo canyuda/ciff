@@ -8,8 +8,6 @@ import com.ciff.agent.service.AgentToolService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 public class AgentFacadeImpl implements AgentFacade {
@@ -28,8 +26,4 @@ public class AgentFacadeImpl implements AgentFacade {
         return vo;
     }
 
-    @Override
-    public List<Long> getToolIds(Long agentId) {
-        return agentToolService.listToolIds(agentId);
-    }
 }

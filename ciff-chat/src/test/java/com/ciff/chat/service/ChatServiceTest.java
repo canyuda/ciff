@@ -9,14 +9,15 @@ import com.ciff.chat.dto.*;
 import com.ciff.chat.entity.ChatMessagePO;
 import com.ciff.chat.service.impl.ChatServiceImpl;
 import com.ciff.common.enums.ProviderType;
-import com.ciff.common.http.LlmHttpClient;
 import com.ciff.knowledge.entity.KnowledgeChunkPO;
 import com.ciff.knowledge.facade.KnowledgeFacade;
 import com.ciff.mcp.facade.ToolFacade;
 import com.ciff.provider.dto.LlmCallConfig;
 import com.ciff.provider.dto.ModelDefaultParam;
 import com.ciff.provider.facade.ProviderFacade;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ciff.provider.llm.LlmChatClient;
+import com.ciff.provider.llm.LlmChatClientFactory;
+import com.ciff.provider.llm.LlmChatResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,13 +66,13 @@ class ChatServiceTest {
     private ToolFacade toolFacade;
 
     @Mock
-    private LlmHttpClient llmHttpClient;
+    private LlmChatClientFactory llmChatClientFactory;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Mock
+    private LlmChatClient llmChatClient;
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(chatService, "objectMapper", objectMapper);
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(1);
         executor.setMaxPoolSize(1);
@@ -103,11 +104,16 @@ class ChatServiceTest {
         given(agentKnowledgeService.listKnowledgeIds(1L)).willReturn(List.of());
         given(agentToolService.listToolIds(1L)).willReturn(List.of());
 
-        String llmResponse = """
-                {"choices":[{"message":{"role":"assistant","content":"Hi there!"}}],"usage":{"prompt_tokens":5,"completion_tokens":3}}
-                """;
-        given(llmHttpClient.post(eq("TestProvider"), anyString(), anyMap(), anyString()))
-                .willReturn(llmResponse);
+        com.ciff.provider.entity.ProviderPO provider = new com.ciff.provider.entity.ProviderPO();
+        provider.setId(1L);
+        provider.setName("TestProvider");
+        given(providerFacade.getProviderById(1L)).willReturn(provider);
+        given(llmChatClientFactory.create(provider)).willReturn(llmChatClient);
+        LlmChatResponse llmResp = LlmChatResponse.builder()
+                .content("Hi there!")
+                .usage(LlmChatResponse.Usage.builder().promptTokens(5).completionTokens(3).totalTokens(8).build())
+                .build();
+        given(llmChatClient.chat(any())).willReturn(llmResp);
 
         ChatMessagePO assistantMsg = buildMessage(101L, "assistant", "Hi there!");
         given(messageService.saveAssistantMessage(eq(10L), eq("Hi there!"), any(), eq("gpt-4o"), anyInt(), any()))
@@ -150,11 +156,16 @@ class ChatServiceTest {
         given(agentKnowledgeService.listKnowledgeIds(1L)).willReturn(List.of());
         given(agentToolService.listToolIds(1L)).willReturn(List.of());
 
-        String llmResponse = """
-                {"choices":[{"message":{"role":"assistant","content":"Sure!"}}],"usage":{"prompt_tokens":10,"completion_tokens":2}}
-                """;
-        given(llmHttpClient.post(anyString(), anyString(), anyMap(), anyString()))
-                .willReturn(llmResponse);
+        com.ciff.provider.entity.ProviderPO provider = new com.ciff.provider.entity.ProviderPO();
+        provider.setId(1L);
+        provider.setName("TestProvider");
+        given(providerFacade.getProviderById(1L)).willReturn(provider);
+        given(llmChatClientFactory.create(provider)).willReturn(llmChatClient);
+        LlmChatResponse llmResp = LlmChatResponse.builder()
+                .content("Sure!")
+                .usage(LlmChatResponse.Usage.builder().promptTokens(10).completionTokens(2).totalTokens(12).build())
+                .build();
+        given(llmChatClient.chat(any())).willReturn(llmResp);
 
         ChatMessagePO assistantMsg = buildMessage(102L, "assistant", "Sure!");
         given(messageService.saveAssistantMessage(eq(10L), eq("Sure!"), any(), eq("gpt-4o"), anyInt(), any()))
@@ -198,11 +209,16 @@ class ChatServiceTest {
         given(agentKnowledgeService.listKnowledgeIds(1L)).willReturn(List.of());
         given(agentToolService.listToolIds(1L)).willReturn(List.of());
 
-        String llmResponse = """
-                {"choices":[{"message":{"role":"assistant","content":"Hello!"}}],"usage":{"prompt_tokens":3,"completion_tokens":2}}
-                """;
-        given(llmHttpClient.post(anyString(), anyString(), anyMap(), anyString()))
-                .willReturn(llmResponse);
+        com.ciff.provider.entity.ProviderPO provider = new com.ciff.provider.entity.ProviderPO();
+        provider.setId(1L);
+        provider.setName("TestProvider");
+        given(providerFacade.getProviderById(1L)).willReturn(provider);
+        given(llmChatClientFactory.create(provider)).willReturn(llmChatClient);
+        LlmChatResponse llmResp = LlmChatResponse.builder()
+                .content("Hello!")
+                .usage(LlmChatResponse.Usage.builder().promptTokens(3).completionTokens(2).totalTokens(5).build())
+                .build();
+        given(llmChatClient.chat(any())).willReturn(llmResp);
 
         ChatMessagePO assistantMsg = buildMessage(101L, "assistant", "Hello!");
         given(messageService.saveAssistantMessage(anyLong(), anyString(), any(), anyString(), anyInt(), any()))

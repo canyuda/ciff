@@ -17,8 +17,6 @@ public class RerankProperties {
 
     private int timeoutMs = 800;
 
-    private int topN = 5;
-
     /** Minimum relevance score threshold, chunks below this are filtered out */
     private double scoreThreshold = 0.3;
 

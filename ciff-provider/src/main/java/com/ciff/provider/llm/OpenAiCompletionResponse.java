@@ -30,6 +30,22 @@ public class OpenAiCompletionResponse {
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public static class Message {
         private String content;
+        private List<ToolCall> toolCalls;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ToolCall {
+        private String id;
+        private String type;
+        private FunctionCall function;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class FunctionCall {
+        private String name;
+        private String arguments;
     }
 
     @Data

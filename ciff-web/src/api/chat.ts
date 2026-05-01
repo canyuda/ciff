@@ -1,4 +1,4 @@
-import { get, post, del } from '@/utils/request'
+import { get, post, put, del } from '@/utils/request'
 import { getToken } from '@/utils/auth'
 import type { PageResult } from '@/types/common'
 
@@ -87,6 +87,10 @@ export function getConversations(params: {
 
 export function deleteConversation(id: number) {
   return del(`/v1/conversations/${id}`)
+}
+
+export function updateConversationTitle(id: number, title: string) {
+  return put(`/v1/conversations/${id}/title`, null, { params: { title } })
 }
 
 // ========== Message APIs ==========

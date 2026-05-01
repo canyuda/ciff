@@ -32,7 +32,9 @@ instance.interceptors.response.use(
       removeToken()
       const currentPath = window.location.pathname
       if (currentPath !== '/login') {
-        ElMessage.warning('Session expired, please sign in again')
+        const code = error.response.data?.code
+        const msg = code === 1010 ? '登录已过期，请重新登录' : '请先登录'
+        ElMessage.warning(msg)
         window.location.href = '/login'
       }
       return Promise.reject(error)

@@ -1,12 +1,11 @@
 package com.ciff.knowledge.service.impl;
 
 import com.ciff.common.http.LlmHttpClient;
+import com.ciff.common.util.JsonUtil;
 import com.ciff.knowledge.config.EmbeddingProperties;
 import com.ciff.knowledge.dto.EmbeddingRequestBody;
 import com.ciff.knowledge.dto.EmbeddingResponse;
 import com.ciff.knowledge.service.EmbeddingService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,7 +22,6 @@ public class EmbeddingServiceImpl implements EmbeddingService {
 
     private final LlmHttpClient llmHttpClient;
     private final EmbeddingProperties properties;
-    private final ObjectMapper objectMapper;
 
     @Override
     public List<float[]> embed(List<String> texts) {
@@ -63,16 +61,12 @@ public class EmbeddingServiceImpl implements EmbeddingService {
                 .model(properties.getModel())
                 .input(texts)
                 .build();
-        try {
-            return objectMapper.writeValueAsString(body);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Failed to build embedding request body", e);
-        }
+        return JsonUtil.toJson(body);
     }
 
     private List<float[]> parseResponse(String response, int expectedCount) {
         try {
-            EmbeddingResponse resp = objectMapper.readValue(response, EmbeddingResponse.class);
+            EmbeddingResponse resp = JsonUtil.fromJson(response, EmbeddingResponse.class);
 
             if (resp.getData() == null || resp.getData().isEmpty()) {
                 throw new IllegalStateException("Embedding API response missing 'data' field");

@@ -48,6 +48,15 @@ public class ChatController {
         return Result.ok();
     }
 
+    @PutMapping("/{id}/title")
+    @Operation(summary = "更新会话标题")
+    public Result<Void> updateTitle(
+            @Parameter(description = "会话 ID") @PathVariable Long id,
+            @Parameter(description = "新标题") @RequestParam String title) {
+        conversationService.updateTitle(id, title);
+        return Result.ok();
+    }
+
     @GetMapping("/{conversationId}/messages")
     @Operation(summary = "分页查询会话消息")
     public Result<PageResult<ChatMessageVO>> pageMessages(

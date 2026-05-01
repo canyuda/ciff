@@ -4,13 +4,13 @@ import com.ciff.common.enums.AuthType;
 import com.ciff.common.enums.ProviderType;
 import com.ciff.common.http.LlmHttpClient;
 import com.ciff.common.util.ApiKeyEncryptor;
+import com.ciff.common.util.JsonUtil;
 import com.ciff.provider.dto.ProviderAuthConfig;
 import com.ciff.provider.entity.ProviderPO;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -26,7 +26,6 @@ public class OpenAiCompatibleClient implements LlmChatClient {
     private final ProviderPO provider;
     private final LlmHttpClient httpClient;
     private final ApiKeyEncryptor apiKeyEncryptor;
-    private final ObjectMapper objectMapper;
 
     @Override
     public void probe() {
@@ -118,16 +117,12 @@ public class OpenAiCompatibleClient implements LlmChatClient {
                 .maxTokens(request.getMaxTokens())
                 .messages(request.getMessages())
                 .build();
-        try {
-            return objectMapper.writeValueAsString(body);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Failed to serialize request body", e);
-        }
+        return JsonUtil.toJson(body);
     }
 
     private LlmChatResponse parseResponse(String responseBody) {
         try {
-            OpenAiCompletionResponse resp = objectMapper.readValue(responseBody, OpenAiCompletionResponse.class);
+            OpenAiCompletionResponse resp = JsonUtil.fromJsonSnakeCase(responseBody, OpenAiCompletionResponse.class);
 
             LlmChatResponse.Usage usage = null;
             if (resp.getUsage() != null) {
@@ -141,11 +136,25 @@ public class OpenAiCompatibleClient implements LlmChatClient {
 
             String content = "";
             String finishReason = null;
+            List<LlmChatResponse.ToolCall> toolCalls = null;
             if (resp.getChoices() != null && !resp.getChoices().isEmpty()) {
                 OpenAiCompletionResponse.Choice choice = resp.getChoices().get(0);
                 finishReason = choice.getFinishReason();
-                if (choice.getMessage() != null && choice.getMessage().getContent() != null) {
-                    content = choice.getMessage().getContent();
+                if (choice.getMessage() != null) {
+                    content = choice.getMessage().getContent() != null ? choice.getMessage().getContent() : "";
+                    // Parse tool calls
+                    if (choice.getMessage().getToolCalls() != null && !choice.getMessage().getToolCalls().isEmpty()) {
+                        toolCalls = choice.getMessage().getToolCalls().stream()
+                                .map(tc -> LlmChatResponse.ToolCall.builder()
+                                        .id(tc.getId())
+                                        .type(tc.getType())
+                                        .function(LlmChatResponse.FunctionCall.builder()
+                                                .name(tc.getFunction().getName())
+                                                .arguments(tc.getFunction().getArguments())
+                                                .build())
+                                        .build())
+                                .toList();
+                    }
                 }
             }
 
@@ -153,8 +162,9 @@ public class OpenAiCompatibleClient implements LlmChatClient {
                     .content(content)
                     .finishReason(finishReason)
                     .usage(usage)
+                    .toolCalls(toolCalls)
                     .build();
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             throw new IllegalStateException("Failed to parse response: " + responseBody, e);
         }
     }
@@ -165,7 +175,7 @@ public class OpenAiCompatibleClient implements LlmChatClient {
      */
     private String parseStreamChunk(String chunk) {
         try {
-            OpenAiSseChunk sse = objectMapper.readValue(chunk, OpenAiSseChunk.class);
+            OpenAiSseChunk sse = JsonUtil.fromJson(chunk, OpenAiSseChunk.class);
             if (sse.getChoices() != null && !sse.getChoices().isEmpty()) {
                 OpenAiSseChunk.Choice choice = sse.getChoices().get(0);
                 if (choice.getDelta() != null && choice.getDelta().getContent() != null) {

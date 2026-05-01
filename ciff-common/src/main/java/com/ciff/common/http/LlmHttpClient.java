@@ -70,14 +70,6 @@ public class LlmHttpClient {
     }
 
     /**
-     * 同步 GET 请求，用于连通性探测（无熔断保护）。
-     * 只关心 HTTP 状态码，不关心响应体。
-     */
-    public void get(String url, Map<String, String> headers) {
-        doGet(url, headers);
-    }
-
-    /**
      * 同步 GET 请求，带 per-provider 熔断和重试保护。
      */
     public void get(String providerName, String url, Map<String, String> headers) {

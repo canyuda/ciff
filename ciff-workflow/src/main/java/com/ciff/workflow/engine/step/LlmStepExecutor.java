@@ -1,14 +1,17 @@
 package com.ciff.workflow.engine.step;
 
-import com.ciff.common.enums.ProviderType;
-import com.ciff.common.http.LlmHttpClient;
+import com.ciff.common.util.JsonUtil;
 import com.ciff.provider.dto.LlmCallConfig;
+import com.ciff.provider.entity.ProviderPO;
 import com.ciff.provider.facade.ProviderFacade;
+import com.ciff.provider.llm.LlmChatClient;
+import com.ciff.provider.llm.LlmChatClientFactory;
+import com.ciff.provider.llm.LlmChatRequest;
+import com.ciff.provider.llm.LlmChatResponse;
 import com.ciff.workflow.dto.StepDefinition;
 import com.ciff.workflow.engine.WorkflowContext;
 import com.ciff.workflow.engine.dto.WorkflowExecutionResult.StepResult;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -21,8 +24,7 @@ import java.util.*;
 public class LlmStepExecutor implements StepExecutor {
 
     private final ProviderFacade providerFacade;
-    private final LlmHttpClient llmHttpClient;
-    private final ObjectMapper objectMapper;
+    private final LlmChatClientFactory llmChatClientFactory;
 
     @Override
     public StepResult execute(StepDefinition step, WorkflowContext context) {
@@ -33,22 +35,30 @@ public class LlmStepExecutor implements StepExecutor {
 
         LlmCallConfig llmConfig = providerFacade.getLlmCallConfig(modelId);
 
-        List<Map<String, String>> messages = new ArrayList<>();
+        List<LlmChatRequest.Message> messages = new ArrayList<>();
         if (!systemPrompt.isEmpty()) {
-            messages.add(Map.of("role", "system", "content", systemPrompt));
+            messages.add(LlmChatRequest.Message.builder()
+                    .role("system")
+                    .content(systemPrompt)
+                    .build());
         }
-        messages.add(Map.of("role", "user", "content", userPrompt));
-
-        String url = getChatEndpoint(llmConfig);
-        Map<String, String> headers = buildHeaders(llmConfig);
-        Map<String, Object> body = buildRequestBody(llmConfig, messages);
+        messages.add(LlmChatRequest.Message.builder()
+                .role("user")
+                .content(userPrompt)
+                .build());
 
         try {
-            String requestBody = objectMapper.writeValueAsString(body);
-            String responseBody = llmHttpClient.post(llmConfig.getProviderName(), url, headers, requestBody);
-            Map<String, Object> response = objectMapper.readValue(responseBody, new TypeReference<>() {});
+            ProviderPO provider = providerFacade.getProviderById(llmConfig.getProviderId());
+            LlmChatClient client = llmChatClientFactory.create(provider);
 
-            String content = extractContent(response);
+            LlmChatRequest request = LlmChatRequest.builder()
+                    .modelName(llmConfig.getModelName())
+                    .messages(messages)
+                    .maxTokens(llmConfig.getMaxTokens())
+                    .build();
+
+            LlmChatResponse response = client.chat(request);
+            String content = response.getContent() != null ? response.getContent() : "";
 
             Map<String, Object> outputs = new HashMap<>();
             outputs.put("rawContent", content);
@@ -78,36 +88,11 @@ public class LlmStepExecutor implements StepExecutor {
         }
     }
 
-    private String extractContent(Map<String, Object> response) {
-        // OpenAI format: choices[0].message.content
-        Object choices = response.get("choices");
-        if (choices instanceof List<?> list && !list.isEmpty()) {
-            Object first = list.get(0);
-            if (first instanceof Map<?, ?> choice) {
-                Object message = choice.get("message");
-                if (message instanceof Map<?, ?> msg) {
-                    Object content = msg.get("content");
-                    return content != null ? content.toString() : "";
-                }
-            }
-        }
-        // Claude format: content[0].text
-        Object content = response.get("content");
-        if (content instanceof List<?> list && !list.isEmpty()) {
-            Object first = list.get(0);
-            if (first instanceof Map<?, ?> block) {
-                Object text = block.get("text");
-                return text != null ? text.toString() : "";
-            }
-        }
-        return response.toString();
-    }
-
     private void parseStructuredOutput(String content, Map<String, Object> outputs) {
         String trimmed = content.trim();
         if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
             try {
-                Map<String, Object> parsed = objectMapper.readValue(trimmed, new TypeReference<>() {});
+                Map<String, Object> parsed = JsonUtil.fromJson(trimmed, new TypeReference<>() {});
                 outputs.putAll(parsed);
             } catch (Exception ignored) {
                 // not JSON, keep as raw content
@@ -127,36 +112,6 @@ public class LlmStepExecutor implements StepExecutor {
             mapped.put(entry.getValue(), value);
         }
         return mapped;
-    }
-
-    private String getChatEndpoint(LlmCallConfig config) {
-        String baseUrl = config.getApiBaseUrl().replaceAll("/+$", "");
-        if (config.getProviderType() == ProviderType.CLAUDE) {
-            return baseUrl + "/v1/messages";
-        }
-        return baseUrl + "/v1/chat/completions";
-    }
-
-    private Map<String, String> buildHeaders(LlmCallConfig config) {
-        Map<String, String> headers = new LinkedHashMap<>();
-        headers.put("Content-Type", "application/json");
-        if (config.getProviderType() == ProviderType.CLAUDE) {
-            headers.put("x-api-key", config.getApiKey());
-            headers.put("anthropic-version", "2023-06-01");
-        } else {
-            headers.put("Authorization", "Bearer " + config.getApiKey());
-        }
-        return headers;
-    }
-
-    private Map<String, Object> buildRequestBody(LlmCallConfig config, List<Map<String, String>> messages) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", config.getModelName());
-        body.put("messages", messages);
-        if (config.getMaxTokens() != null) {
-            body.put("max_tokens", config.getMaxTokens());
-        }
-        return body;
     }
 
     private Long toLong(Object value) {

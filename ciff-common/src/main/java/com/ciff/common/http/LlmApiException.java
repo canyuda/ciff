@@ -53,11 +53,6 @@ public class LlmApiException extends RuntimeException {
                 "LLM request failed: " + maskUrl(url) + ", status: " + statusCode + ", response: " + truncate(body));
     }
 
-    public static LlmApiException unknown(String url, Throwable cause) {
-        return new LlmApiException(ErrorType.UNKNOWN,
-                "LLM request error: " + maskUrl(url), cause);
-    }
-
     private static String maskUrl(String url) {
         if (url == null) return "";
         return url.replaceAll("([?&])(api_key|key|token|secret)=([^&]+)", "$1$2=***");

@@ -1,5 +1,6 @@
 package com.ciff.common.exception;
 
+import cn.dev33.satoken.exception.NotLoginException;
 import com.ciff.common.constant.ErrorCode;
 import com.ciff.common.dto.Result;
 import com.ciff.common.http.LlmApiException;
@@ -34,6 +35,17 @@ public class GlobalExceptionHandler {
         };
         log.error("LLM API error: type={}, message={}", e.getErrorType(), e.getMessage());
         return Result.fail(errorCode.getCode(), errorCode.getMessage());
+    }
+
+    @ExceptionHandler(NotLoginException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public Result<Void> handleNotLoginException(NotLoginException e) {
+        if (NotLoginException.TOKEN_TIMEOUT.equals(e.getType())) {
+            log.warn("Token expired: {}", e.getMessage());
+            return Result.fail(ErrorCode.AUTH_TOKEN_EXPIRED.getCode(), ErrorCode.AUTH_TOKEN_EXPIRED.getMessage());
+        }
+        log.warn("Auth failed: type={}, message={}", e.getType(), e.getMessage());
+        return Result.fail(ErrorCode.UNAUTHORIZED.getCode(), ErrorCode.UNAUTHORIZED.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

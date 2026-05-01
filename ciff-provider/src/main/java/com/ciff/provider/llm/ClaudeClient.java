@@ -3,10 +3,9 @@ package com.ciff.provider.llm;
 import com.ciff.common.enums.AuthType;
 import com.ciff.common.http.LlmHttpClient;
 import com.ciff.common.util.ApiKeyEncryptor;
+import com.ciff.common.util.JsonUtil;
 import com.ciff.provider.dto.ProviderAuthConfig;
 import com.ciff.provider.entity.ProviderPO;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
@@ -28,7 +27,6 @@ public class ClaudeClient implements LlmChatClient {
     private final ProviderPO provider;
     private final LlmHttpClient httpClient;
     private final ApiKeyEncryptor apiKeyEncryptor;
-    private final ObjectMapper objectMapper;
 
     @Override
     public void probe() {
@@ -119,16 +117,12 @@ public class ClaudeClient implements LlmChatClient {
                 .system(systemContent.isEmpty() ? null : systemContent.toString())
                 .messages(chatMessages)
                 .build();
-        try {
-            return objectMapper.writeValueAsString(body);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Failed to serialize request body", e);
-        }
+        return JsonUtil.toJsonSnakeCase(body);
     }
 
     private LlmChatResponse parseResponse(String responseBody) {
         try {
-            ClaudeMessagesResponse resp = objectMapper.readValue(responseBody, ClaudeMessagesResponse.class);
+            ClaudeMessagesResponse resp = JsonUtil.fromJsonSnakeCase(responseBody, ClaudeMessagesResponse.class);
 
             LlmChatResponse.Usage usage = null;
             if (resp.getUsage() != null) {
@@ -143,22 +137,42 @@ public class ClaudeClient implements LlmChatClient {
             }
 
             String content = "";
+            List<LlmChatResponse.ToolCall> toolCalls = null;
             if (resp.getContent() != null) {
                 StringBuilder sb = new StringBuilder();
+                List<LlmChatResponse.ToolCall> tcList = new ArrayList<>();
                 for (ClaudeMessagesResponse.ContentBlock block : resp.getContent()) {
                     if ("text".equals(block.getType())) {
                         sb.append(block.getText() != null ? block.getText() : "");
+                    } else if ("tool_use".equals(block.getType())) {
+                        // Parse tool_use block
+                        String arguments = "{}";
+                        if (block.getInput() != null) {
+                            arguments = JsonUtil.toJson(block.getInput());
+                        }
+                        tcList.add(LlmChatResponse.ToolCall.builder()
+                                .id(block.getId())
+                                .type("function")
+                                .function(LlmChatResponse.FunctionCall.builder()
+                                        .name(block.getName())
+                                        .arguments(arguments)
+                                        .build())
+                                .build());
                     }
                 }
                 content = sb.toString();
+                if (!tcList.isEmpty()) {
+                    toolCalls = tcList;
+                }
             }
 
             return LlmChatResponse.builder()
                     .content(content)
                     .finishReason(resp.getStopReason())
                     .usage(usage)
+                    .toolCalls(toolCalls)
                     .build();
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             throw new IllegalStateException("Failed to parse response: " + responseBody, e);
         }
     }
@@ -170,7 +184,7 @@ public class ClaudeClient implements LlmChatClient {
      */
     private String parseStreamChunk(String chunk) {
         try {
-            ClaudeSseChunk sse = objectMapper.readValue(chunk, ClaudeSseChunk.class);
+            ClaudeSseChunk sse = JsonUtil.fromJson(chunk, ClaudeSseChunk.class);
             if ("content_block_delta".equals(sse.getType()) && sse.getDelta() != null) {
                 if ("text_delta".equals(sse.getDelta().getType())) {
                     return sse.getDelta().getText();

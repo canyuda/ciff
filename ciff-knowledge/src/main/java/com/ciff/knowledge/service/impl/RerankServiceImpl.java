@@ -1,11 +1,10 @@
 package com.ciff.knowledge.service.impl;
 
 import com.ciff.common.http.LlmHttpClient;
+import com.ciff.common.util.JsonUtil;
 import com.ciff.knowledge.config.RerankProperties;
 import com.ciff.knowledge.service.RerankService;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +21,6 @@ public class RerankServiceImpl implements RerankService {
 
     private final LlmHttpClient llmHttpClient;
     private final RerankProperties properties;
-    private final ObjectMapper objectMapper;
 
     @Override
     public List<RerankEntry> rerank(String query, List<String> documents, int topN) {
@@ -64,19 +62,11 @@ public class RerankServiceImpl implements RerankService {
     }
 
     private String writeValue(Object value) {
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Failed to serialize rerank request", e);
-        }
+        return JsonUtil.toJson(value);
     }
 
     private RerankResponse readValue(String json) {
-        try {
-            return objectMapper.readValue(json, RerankResponse.class);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Failed to parse rerank response", e);
-        }
+        return JsonUtil.fromJson(json, RerankResponse.class);
     }
 
     // ---- DTOs ----

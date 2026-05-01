@@ -1,11 +1,10 @@
 package com.ciff.workflow.engine.step;
 
+import com.ciff.common.util.JsonUtil;
 import com.ciff.workflow.dto.ConditionRule;
 import com.ciff.workflow.dto.StepDefinition;
 import com.ciff.workflow.engine.WorkflowContext;
 import com.ciff.workflow.engine.dto.WorkflowExecutionResult.StepResult;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,8 +15,6 @@ import java.util.*;
 @Component
 @RequiredArgsConstructor
 public class ConditionStepExecutor implements StepExecutor {
-
-    private final ObjectMapper objectMapper;
 
     @Override
     public StepResult execute(StepDefinition step, WorkflowContext context) {
@@ -33,7 +30,7 @@ public class ConditionStepExecutor implements StepExecutor {
                 : List.of();
 
         List<ConditionRule> rules = rawRules.stream()
-                .map(r -> objectMapper.convertValue(r, ConditionRule.class))
+                .map(r -> JsonUtil.convert(r, ConditionRule.class))
                 .toList();
 
         String matchedStepId = null;

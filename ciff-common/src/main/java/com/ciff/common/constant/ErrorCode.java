@@ -17,6 +17,7 @@ public enum ErrorCode {
     LLM_UNAVAILABLE(1006, "AI service temporarily unavailable"),
     LLM_AUTH_FAILED(1007, "AI service authentication failed"),
     LLM_RATE_LIMITED(1008, "AI service rate limit exceeded"),
+    AUTH_TOKEN_EXPIRED(1010, "Token expired"),
     INTERNAL_ERROR(1999, "Internal server error");
 
     private final int code;

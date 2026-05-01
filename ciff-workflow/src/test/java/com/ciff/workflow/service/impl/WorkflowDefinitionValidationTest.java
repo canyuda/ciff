@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class WorkflowDefinitionValidationTest {
 
-    private final WorkflowServiceImpl service = new WorkflowServiceImpl(null, null, null, null);
+    private final WorkflowServiceImpl service = new WorkflowServiceImpl(null, null, null, null, null);
 
     @Test
     void validate_nullDefinition_shouldThrow() {

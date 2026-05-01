@@ -1,21 +1,18 @@
 package com.ciff.provider.convertor;
 
 import com.ciff.common.enums.ProviderStatus;
+import com.ciff.common.util.JsonUtil;
 import com.ciff.provider.dto.ModelCreateRequest;
 import com.ciff.provider.dto.ModelDefaultParam;
 import com.ciff.provider.dto.ModelUpdateRequest;
 import com.ciff.provider.dto.ModelVO;
 import com.ciff.provider.entity.ModelPO;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Model 对象转换器。
  * providerName 由 Service 层查询后设置，Convertor 不涉及关联查询。
  */
 public final class ModelConvertor {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private ModelConvertor() {
     }
@@ -71,8 +68,8 @@ public final class ModelConvertor {
             return null;
         }
         try {
-            return MAPPER.readValue(json, ModelDefaultParam.class);
-        } catch (JsonProcessingException e) {
+            return JsonUtil.fromJson(json, ModelDefaultParam.class);
+        } catch (Exception e) {
             throw new IllegalArgumentException("Invalid JSON for defaultParams: " + json, e);
         }
     }

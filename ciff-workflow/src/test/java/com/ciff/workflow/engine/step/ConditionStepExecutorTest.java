@@ -3,7 +3,6 @@ package com.ciff.workflow.engine.step;
 import com.ciff.workflow.dto.StepDefinition;
 import com.ciff.workflow.engine.WorkflowContext;
 import com.ciff.workflow.engine.dto.WorkflowExecutionResult.StepResult;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +17,7 @@ class ConditionStepExecutorTest {
 
     @BeforeEach
     void setUp() {
-        executor = new ConditionStepExecutor(new ObjectMapper());
+        executor = new ConditionStepExecutor();
     }
 
     @Test

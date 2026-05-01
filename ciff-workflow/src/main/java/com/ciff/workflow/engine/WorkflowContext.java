@@ -11,20 +11,12 @@ public class WorkflowContext {
         this.inputs = inputs != null ? inputs : new HashMap<>();
     }
 
-    public Object getInput(String key) {
-        return inputs.get(key);
-    }
-
     public Map<String, Object> getInputs() {
         return inputs;
     }
 
     public void setStepOutput(String stepId, Map<String, Object> outputs) {
         stepOutputs.put(stepId, outputs);
-    }
-
-    public Map<String, Object> getStepOutput(String stepId) {
-        return stepOutputs.get(stepId);
     }
 
     public Object resolveVariable(String expression) {

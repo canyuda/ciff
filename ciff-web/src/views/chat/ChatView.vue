@@ -21,8 +21,13 @@
               <span class="agent-name">{{ conv.agentName }}</span>
               <span class="conv-time">{{ formatDate(conv.updateTime) }}</span>
             </div>
-            <div class="delete-btn" @click.stop="handleDeleteConversation(conv.id)">
-              <el-icon><Delete /></el-icon>
+            <div class="action-btns">
+              <div class="edit-btn" @click.stop="handleEditTitle(conv)">
+                <el-icon><Edit /></el-icon>
+              </div>
+              <div class="delete-btn" @click.stop="handleDeleteConversation(conv.id)">
+                <el-icon><Delete /></el-icon>
+              </div>
             </div>
           </div>
         </TransitionGroup>
@@ -184,6 +189,23 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- Edit title dialog -->
+    <el-dialog v-model="editDialogVisible" title="编辑会话标题" width="400px">
+      <el-input
+        v-model="editingTitle"
+        placeholder="请输入会话标题"
+        maxlength="256"
+        show-word-limit
+        @keyup.enter="handleSaveTitle"
+      />
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!editingTitle.trim()" @click="handleSaveTitle">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -193,6 +215,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus,
   Delete,
+  Edit,
   Promotion,
   VideoPause,
   User,
@@ -204,6 +227,7 @@ import { renderMarkdown } from '@/utils/markdown'
 import {
   getConversations,
   deleteConversation,
+  updateConversationTitle,
   getMessages,
   streamChat,
   type ConversationVO,
@@ -229,6 +253,11 @@ const ragMode = ref<'RAG_WITH_RERANKER' | 'RAG_WITHOUT_RERANKER' | 'NO_RAG'>('NO
 const messageScrollRef = ref<InstanceType<typeof ElScrollbar>>()
 const scrollKey = ref(0)
 let streamController: AbortController | null = null
+
+// Edit conversation title state
+const editDialogVisible = ref(false)
+const editingConversationId = ref<number | null>(null)
+const editingTitle = ref('')
 
 // ========== Lifecycle ==========
 onMounted(async () => {
@@ -294,6 +323,26 @@ async function handleDeleteConversation(id: number) {
     await loadConversations()
   } catch {
     // user cancelled
+  }
+}
+
+function handleEditTitle(conv: ConversationVO) {
+  editingConversationId.value = conv.id
+  editingTitle.value = conv.title
+  editDialogVisible.value = true
+}
+
+async function handleSaveTitle() {
+  if (!editingConversationId.value || !editingTitle.value.trim()) {
+    return
+  }
+  try {
+    await updateConversationTitle(editingConversationId.value, editingTitle.value.trim())
+    ElMessage.success('标题已更新')
+    editDialogVisible.value = false
+    await loadConversations()
+  } catch {
+    // error handled by interceptor
   }
 }
 
@@ -478,7 +527,7 @@ function formatTime(iso: string): string {
 .conversation-item {
   position: relative;
   padding: 12px 16px;
-  padding-right: 40px;
+  padding-right: 60px;
   cursor: pointer;
   border-bottom: 1px solid var(--ciff-border-light);
   transition: all 0.2s ease;
@@ -524,13 +573,23 @@ function formatTime(iso: string): string {
   font-weight: var(--ciff-font-medium);
 }
 
-.delete-btn {
+.action-btns {
   position: absolute;
   top: 50%;
   right: 8px;
   transform: translateY(-50%);
   opacity: 0;
   transition: all 0.2s ease;
+  display: flex;
+  gap: 2px;
+}
+
+.conversation-item:hover .action-btns {
+  opacity: 1;
+}
+
+.edit-btn,
+.delete-btn {
   color: var(--ciff-text-tertiary);
   cursor: pointer;
   padding: 6px;
@@ -541,8 +600,9 @@ function formatTime(iso: string): string {
   justify-content: center;
 }
 
-.conversation-item:hover .delete-btn {
-  opacity: 1;
+.edit-btn:hover {
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
 }
 
 .delete-btn:hover {

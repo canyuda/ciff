@@ -4,7 +4,6 @@ import com.ciff.common.enums.ProviderType;
 import com.ciff.common.http.LlmHttpClient;
 import com.ciff.common.util.ApiKeyEncryptor;
 import com.ciff.provider.entity.ProviderPO;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +16,6 @@ public class LlmChatClientFactory {
 
     private final LlmHttpClient httpClient;
     private final ApiKeyEncryptor apiKeyEncryptor;
-    private final ObjectMapper objectMapper;
 
     /**
      * 创建 LlmChatClient。
@@ -26,9 +24,9 @@ public class LlmChatClientFactory {
      */
     public LlmChatClient create(ProviderPO provider) {
         if (provider.getType() == ProviderType.CLAUDE) {
-            return new ClaudeClient(provider, httpClient, apiKeyEncryptor, objectMapper);
+            return new ClaudeClient(provider, httpClient, apiKeyEncryptor);
         }
         // 其他所有类型走 OpenAI 兼容接口
-        return new OpenAiCompatibleClient(provider, httpClient, apiKeyEncryptor, objectMapper);
+        return new OpenAiCompatibleClient(provider, httpClient, apiKeyEncryptor);
     }
 }

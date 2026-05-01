@@ -3,7 +3,6 @@ package com.ciff.workflow.engine.step;
 import com.ciff.workflow.dto.StepDefinition;
 import com.ciff.workflow.engine.WorkflowContext;
 import com.ciff.workflow.engine.dto.WorkflowExecutionResult.StepResult;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -13,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class LlmStepExecutorOutputTest {
 
-    private final LlmStepExecutor executor = new LlmStepExecutor(null, null, new ObjectMapper());
+    private final LlmStepExecutor executor = new LlmStepExecutor(null, null);
 
     @Test
     void mapOutputs_withResultKey_shouldMapRawContent() {

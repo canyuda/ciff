@@ -5,14 +5,15 @@ import com.ciff.app.config.GitHubOAuthProperties;
 import com.ciff.app.dto.auth.LoginVO;
 import com.ciff.app.dto.auth.UserInfoVO;
 import com.ciff.app.entity.UserPO;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ciff.common.util.JsonUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -21,7 +22,6 @@ public class GitHubOAuthService {
 
     private final GitHubOAuthProperties properties;
     private final UserService userService;
-    private final ObjectMapper objectMapper;
 
     public String getAuthorizeUrl() {
         return properties.getAuthorizeUrl();
@@ -29,9 +29,9 @@ public class GitHubOAuthService {
 
     public LoginVO handleCallback(String code) {
         String accessToken = exchangeToken(code);
-        JsonNode userInfo = fetchUserInfo(accessToken);
-        Long githubId = userInfo.get("id").asLong();
-        String username = userInfo.get("login").asText();
+        Map<String, Object> userInfo = fetchUserInfo(accessToken);
+        Long githubId = ((Number) userInfo.get("id")).longValue();
+        String username = (String) userInfo.get("login");
 
         UserPO user = userService.getByGithubId(githubId);
         if (user == null) {
@@ -63,15 +63,15 @@ public class GitHubOAuthService {
                 .block();
 
         try {
-            JsonNode node = objectMapper.readTree(response);
-            return node.get("access_token").asText();
+            Map<String, Object> node = JsonUtil.toMap(response);
+            return (String) node.get("access_token");
         } catch (Exception e) {
             log.error("Failed to exchange GitHub token: {}", response, e);
             throw new RuntimeException("GitHub OAuth token exchange failed");
         }
     }
 
-    private JsonNode fetchUserInfo(String accessToken) {
+    private Map<String, Object> fetchUserInfo(String accessToken) {
         WebClient webClient = WebClient.builder()
                 .baseUrl("https://api.github.com")
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
@@ -85,7 +85,7 @@ public class GitHubOAuthService {
                 .block();
 
         try {
-            return objectMapper.readTree(response);
+            return JsonUtil.toMap(response);
         } catch (Exception e) {
             log.error("Failed to fetch GitHub user info: {}", response, e);
             throw new RuntimeException("Failed to fetch GitHub user info");
