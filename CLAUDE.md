@@ -114,3 +114,8 @@
   2. [步骤] → 验证：[检查点]
   ```
 - 验证标准明确才能自己 loop 下去；标准模糊只能反复来问
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
